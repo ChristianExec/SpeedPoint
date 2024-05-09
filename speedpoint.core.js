@@ -5035,6 +5035,7 @@ Speed.prototype.createMultiplePeoplePicker = function (properties, callback) {
     var speedContext = this;
     var peoplepickerProperties = (typeof properties === "undefined") ? {} : properties;
     var elementPeople = document.querySelectorAll("[speed-bind-people]");
+    speedContext.peopleDictionary.count = 0;
     speedContext.peopleDictionary.total = elementPeople.length;
     for (var i = 0; i <= (elementPeople.length - 1); i++) {
         var property = elementPeople[i].getAttribute("speed-bind-people");
