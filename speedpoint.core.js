@@ -4273,7 +4273,7 @@ Speed.prototype.stringnifyDate = function (obj) {
         return monthDef[num];
     }
     if (typeof obj == "undefined") obj = {};
-    var reconstructDate = (typeof obj.reconstruct === 'undefined') ? false : obj.reconstruct;
+    var reconstructDate = (typeof obj.reconstruct === 'undefined') ? false : true;
     if (typeof obj.value === 'undefined' || obj.value == "") {
         var str = this.serverDate();
     } else {
@@ -4281,10 +4281,19 @@ Speed.prototype.stringnifyDate = function (obj) {
             var format = obj.format;
             var getDelimiter = format.slice(2, 3);
             var dateObj = obj.value.split(getDelimiter);
+            var formatObj = obj.format.split(getDelimiter);
+            var positions = {}
+            for(var i = 0; i < formatObj.length; i++){
+                positions[formatObj[i]] = i;
+            }
             //change format to used format mm dd yy
-            obj.value = dateObj[1] + getDelimiter + dateObj[0] + getDelimiter + dateObj[2];
+            obj.value = dateObj[positions["mm"]] + getDelimiter + dateObj[positions["dd"]] + getDelimiter + dateObj[positions["yy"]];
         }
         var str = new Date(obj.value);
+    }
+
+    if(reconstructDate){
+        obj.format = obj.reconstruct;
     }
 
     if (typeof obj.includeTime == "undefined") var incTime = false;
