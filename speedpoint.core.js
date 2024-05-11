@@ -974,15 +974,19 @@ Speed.prototype.checkPassedValidation = function () {
  * @returns {object} this object return contains key-value properties
  */
 //========================== SpeedPoint Binding Section =======================
-Speed.prototype.bind = function (listObjects, bindClass) {
+Speed.prototype.bind = function (listObjects, bindClass, bindGroup) {
     speedPointContext = this;
     this.clearValidation();
     var useBindClass = (typeof bindClass === 'string') ? true : false;
+
+    var useBindGroup = (typeof bindGroup === 'undefined') ? false : bindGroup;
     //var bindStaticFields = (typeof staticBind === 'undefined') ? true : staticBind;
     var returnObject = {}
     if (typeof listObjects !== "undefined" && listObjects != null) {
         returnObject = listObjects;
     }
+
+    var bindGroupData = {};
     //decides if u want to bind static fields to objects
     //set this option to false if the static fields already contains the same values with the object
 
@@ -1039,13 +1043,7 @@ Speed.prototype.bind = function (listObjects, bindClass) {
                     } else {
                         returnObject[property] = $("input[name='" + name + "']:checked").val();
                     }
-                } 
-                else if (element[i].type == "date") {
-                    if(element[i].value !== ""){
-                        returnObject[property] = element[i].value;
-                    }
-                }
-                else {
+                } else {
                     var multivalue = (element[i].getAttribute("sptype") === null) ? false : (element[i].getAttribute("sptype").toLowerCase() === "multivalue");
                     var jsonlabel = (element[i].getAttribute("spjsonlabel") === null) ? false : (element[i].getAttribute("spjsonlabel").toLowerCase() === "true");
                     if (multivalue) {
@@ -1087,8 +1085,17 @@ Speed.prototype.bind = function (listObjects, bindClass) {
                     }
 
                 }
-            } else
+            } else{
                 returnObject[property] = element[i].innerText;
+            }
+            
+            if(useBindGroup){
+                var controlGroup = (element[i].getAttribute("speed-bind-group") === null) ? "" : element[i].getAttribute("speed-bind-group").toLowerCase();
+                if(typeof bindGroupData[controlGroup] === "undefined"){
+                    bindGroupData[controlGroup] = {};
+                }
+                bindGroupData[controlGroup][property] = returnObject[property];
+            }
         }
     }
 
@@ -1162,13 +1169,7 @@ Speed.prototype.bind = function (listObjects, bindClass) {
                     } else {
                         returnObject[property] = $("input[name='" + name + "']:checked").val();
                     }
-                } 
-                else if (elementValidate[i].type == "date") {
-                    if(elementValidate[i].value !== ""){
-                        returnObject[property] = elementValidate[i].value;
-                    }
-                }
-                else {
+                } else {
                     var multivalue = (elementValidate[i].getAttribute("sptype") === null) ? false : (elementValidate[i].getAttribute("sptype").toLowerCase() === "multivalue");
                     var jsonlabel = (elementValidate[i].getAttribute("spjsonlabel") === null) ? false : (elementValidate[i].getAttribute("spjsonlabel").toLowerCase() === "true");
                     var overidevalidation = (elementValidate[i].getAttribute("sptype-overide-validation") === null) ? false : (elementValidate[i].getAttribute("sptype-overide-validation").toLowerCase() === "true");
@@ -1209,6 +1210,14 @@ Speed.prototype.bind = function (listObjects, bindClass) {
                         }
                     }
 
+                }
+
+                if(useBindGroup){
+                    var controlGroup = (elementValidate[i].getAttribute("speed-bind-group") === null) ? "" : elementValidate[i].getAttribute("speed-bind-group").toLowerCase();
+                    if(typeof bindGroupData[controlGroup] === "undefined"){
+                        bindGroupData[controlGroup] = {};
+                    }
+                    bindGroupData[controlGroup][property] = returnObject[property];
                 }
             }
             if (onValidation) {
@@ -1304,6 +1313,16 @@ Speed.prototype.bind = function (listObjects, bindClass) {
                             elementType: "text",
                             useElementProperties: false
                         });
+                }
+
+                if(!omitControl){
+                    if(useBindGroup){
+                        var controlGroup = (elementPeople[i].getAttribute("speed-bind-group") === null) ? "" : elementPeople[i].getAttribute("speed-bind-group").toLowerCase();
+                        if(typeof bindGroupData[controlGroup] === "undefined"){
+                            bindGroupData[controlGroup] = {};
+                        }
+                        bindGroupData[controlGroup][property] = returnObject[property];
+                    }
                 }
             }
 
@@ -1420,13 +1439,19 @@ Speed.prototype.bind = function (listObjects, bindClass) {
             });
         }
 
-        if (strignify) {
-            if (!omitControl) {
+        if (!omitControl) {
+            if (strignify) {
                 returnObject[property] = JSON.stringify(arrayValue);
-            }
-        } else {
-            if (!omitControl) {
+            } else {
                 returnObject[property] = arrayValue;
+            }
+
+            if(useBindGroup){
+                var controlGroup = (elementValidate[i].getAttribute("speed-bind-group") === null) ? "" : elementValidate[i].getAttribute("speed-bind-group").toLowerCase();
+                if(typeof bindGroupData[controlGroup] === "undefined"){
+                    bindGroupData[controlGroup] = {};
+                }
+                bindGroupData[controlGroup][property] = returnObject[property];
             }
         }
     }
@@ -1436,7 +1461,6 @@ Speed.prototype.bind = function (listObjects, bindClass) {
         var property = elementMulti[i].getAttribute("speed-MultiCheck-bind");
         var strignify = (elementMulti[i].getAttribute("speed-JSON") !== null) ? (elementMulti[i].getAttribute("speed-JSON").toLowerCase() === "true") : false;
         var inputid = elementMulti[i].getAttribute("id");
-        var inputtype = elementMulti[i].getAttribute("speed-validate-type") === null ? "" : elementMulti[i].getAttribute("speed-validate-type");
 
         var omitControl = (elementMulti[i].getAttribute("speed-as-static") === null) ? false : (elementMulti[i].getAttribute("speed-as-static").toLowerCase() === "true");
         if (useBindClass) {
@@ -1459,15 +1483,25 @@ Speed.prototype.bind = function (listObjects, bindClass) {
                 oneChecked = true;
             }
         });
-        returnObject[property] = (strignify) ? JSON.stringify(multiData) : multiData;
 
-        if (validate && (!oneChecked || inputtype !== "")) {
+        if(!omitControl){
+            returnObject[property] = (strignify) ? JSON.stringify(multiData) : multiData;
+            if(useBindGroup){
+                var controlGroup = (elementValidate[i].getAttribute("speed-bind-group") === null) ? "" : elementValidate[i].getAttribute("speed-bind-group").toLowerCase();
+                if(typeof bindGroupData[controlGroup] === "undefined"){
+                    bindGroupData[controlGroup] = {};
+                }
+                bindGroupData[controlGroup][property] = returnObject[property];
+            }
+        }
+        
+
+        if (validate && !oneChecked) {
             speedPointContext.validateField({
                 id: inputid,
                 staticValue: "",
                 msg: validationMessage,
                 elementType: "text",
-                extension : inputtype,
                 useElementProperties: false
             });
         }
@@ -1510,7 +1544,7 @@ Speed.prototype.bind = function (listObjects, bindClass) {
         }
     }
 
-    return returnObject;
+    return (useBindGroup) ? bindGroupData :  returnObject;
 }
 
 /**
