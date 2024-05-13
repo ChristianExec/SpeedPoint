@@ -1551,19 +1551,28 @@ Speed.prototype.bind = function (listObjects, bindClass, bindGroup) {
  * The getAttachmentControls function gets all speed-bind & speed-bind-validate html attributes names
  * @returns {Array} the Array return contains all controls names
  */
-Speed.prototype.getAttachmentControls = function () {
-    var returnArr = [];
+Speed.prototype.getAttachmentControls = function (useGroup) {
+    var groupMode = (typeof useGroup !== "undefined") ? false : useGroup;
+    var returnArr = (groupMode) ? {} : [];
 
     var element = document.querySelectorAll("[speed-file-bind]");
-
     for (var i = 0; i <= (element.length - 1); i++) {
         var elementProp = {};
         elementProp.property = element[i].getAttribute("speed-file-bind");
         elementProp.id = element[i].id;
         elementProp.type = (element[i].getAttribute("type") === null) ? "" : element[i].getAttribute("type").toLowerCase();
+        var groupName = (element[i].getAttribute("speed-file-group") === null) ? "" : element[i].getAttribute("speed-file-group");
         var includeControl = (element[i].getAttribute("speed-include-control") === null) ? true : (element[i].getAttribute("speed-include-control").toLowerCase() === "true");
-        if (includeControl) {
-            returnArr.push(elementProp);
+        if (includeControl && element[i].tagName.toLowerCase() == "input") {
+            if(groupMode){
+                if(typeof returnArr[groupName] === "undefined"){
+                    returnArr[groupName] = [];
+                }
+                returnArr[groupName].push(elementProp);
+            }
+            else{
+                returnArr.push(elementProp);
+            }
         }
     }
 
@@ -1574,9 +1583,18 @@ Speed.prototype.getAttachmentControls = function () {
         elementProp.property = element[i].getAttribute("speed-file-validate");
         elementProp.id = element[i].id;
         elementProp.type = (element[i].getAttribute("type") === null) ? "" : element[i].getAttribute("type").toLowerCase();
+        var groupName = (element[i].getAttribute("speed-file-group") === null) ? "" : element[i].getAttribute("speed-file-group");
         var includeControl = (element[i].getAttribute("speed-include-control") === null) ? true : (element[i].getAttribute("speed-include-control").toLowerCase() === "true");
-        if (includeControl) {
-            returnArr.push(elementProp);
+        if (includeControl && element[i].tagName.toLowerCase() == "input") {
+            if(groupMode){
+                if(typeof returnArr[groupName] === "undefined"){
+                    returnArr[groupName] = [];
+                }
+                returnArr[groupName].push(elementProp);
+            }
+            else{
+                returnArr.push(elementProp);
+            }
         }
     }
 
