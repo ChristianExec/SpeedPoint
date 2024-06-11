@@ -3855,9 +3855,15 @@ Speed.prototype.getListToControl = function (listName, caml, controls, onSuccess
                 else if (SPFieldType.toLowerCase() === "sp.fieldurlvalue"){
                     objectToReturn[controlsToUse[i]] =  SpeedContext.checkNull(items.get_item(controlsToUse[i]).get_url());
                 }
-                else
+                else{
+                    try{
+                        items.get_item(controlsToUse[i])
+                    }
+                    catch(e){
+                        throw `${controlsToUse[i]} doesnt exist in this list`;
+                    }
                     objectToReturn[controlsToUse[i]] = SpeedContext.checkNull(items.get_item(controlsToUse[i]));
-
+                }
             }
         }
         onSuccess(objectToReturn);
@@ -4012,6 +4018,12 @@ Speed.prototype.getListToItems = function (listName, caml, controls, tableonly, 
                         objectToReturn[controlsToUse[i]] = columnValue;
                     }
                     else {
+                        try{
+                            listEnumerator.get_current().get_item(controlsToUse[i]);
+                        }
+                        catch(e){
+                            throw `${controlsToUse[i]} doesnt exist in this list`;
+                        }
                         var columnValue = SpeedContext.checkNull(listEnumerator.get_current().get_item(controlsToUse[i]));
                         if (typeof conditions === "object" && conditions !== null) {
                             if (typeof conditions[controlsToUse[i]] !== "undefined") {
@@ -4144,6 +4156,12 @@ Speed.prototype.getItemsMaxThreshold = function (listName, caml, listSearchData,
                         objectToReturn[controlsToUse[i]] = arrayToSave;
                     }
                     else {
+                        try{
+                            listEnumerator.get_current().get_item(controlsToUse[i]);
+                        }
+                        catch(e){
+                            throw `${controlsToUse[i]} doesnt exist in this list`;
+                        }
                         var columnValue = SpeedContext.checkNull(listEnumerator.get_current().get_item(controlsToUse[i]));
                         if (typeof conditions === "object" && conditions !== null) {
                             if (typeof conditions[controlsToUse[i]] !== "undefined") {
