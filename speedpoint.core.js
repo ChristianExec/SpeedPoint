@@ -3610,7 +3610,7 @@ Speed.prototype.updateItemsTracker = function (pos, arr, list, context,listName,
         item.update();
         context.executeQueryAsync(function () {
             var newNumber = pos + 1;
-            if(newNumber < (arr.length - 1)){
+            if(newNumber <= (arr.length - 1)){
                 speedContext.updateItemsTracker(newNumber,arr,list,context,listName,onSuccess, onFailedCall);
             }
             else{
