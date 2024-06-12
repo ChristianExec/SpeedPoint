@@ -3586,32 +3586,54 @@ Speed.prototype.updateItems = function (arr, listName, onSuccess, onFailed, appC
     if (typeof arr != 'undefined') {
         if (arr.length != 0) {
             var context = this.initiate();
-            var passwordList = context.get_web().get_lists().getByTitle(listName);
+            var updateList = context.get_web().get_lists().getByTitle(listName);
             if (typeof appContext !== 'undefined') {
                 context = appContext.initiate();
             }
-            context.load(passwordList);
-            $.each(arr, function (i, itemProperties) {
-                var items = [];
-                items[i] = passwordList.getItemById(itemProperties.ID);
-                for (var propName in itemProperties) {
-                    if (propName.toLowerCase() == "id") { } else {
-                        items[i].set_item(propName, itemProperties[propName]);
-                    }
-                }
-                items[i].update();
-            });
-            context.executeQueryAsync(onSuccess, function (sender, args) {
-                onFailedCall(sender, args, {
-                    name: "updateItems",
-                    context: speedContext,
-                    err_description: "",
-                    resource: listName
-                });
-            });
+            //context.load(passwordList);
+            speedContext.updateItemsTracker(0, arr, updateList, context, listName,onSuccess, onFailedCall);
         }
     }
 };
+
+Speed.prototype.updateItemsTracker = function (pos, arr, list, context,listName, onSuccess, onFailedCall) {
+    var speedContext = this;
+    var itemProperties = arr[pos];
+    var item = list.getItemById(itemProperties.ID);
+    context.load(item);
+    context.executeQueryAsync(function () {
+        for (var propName in itemProperties) {
+            if (propName.toLowerCase() !== "id") {
+                item.set_item(propName, itemProperties[propName]);
+            }
+        }
+        item.update();
+        context.executeQueryAsync(function () {
+            var newNumber = pos + 1;
+            if(newNumber < (arr.length - 1)){
+                speedContext.updateItemsTracker(newNumber,arr,list,context,listName,onSuccess, onFailedCall);
+            }
+            else{
+                onSuccess();
+            }
+            speedContext.updateItemsTracker
+        }, function (sender, args) {
+            onFailedCall(sender, args, {
+                name: "updateItems",
+                context: context,
+                err_description: `item with Id ${itemProperties.ID} encountered an error`,
+                resource: listName
+            });
+        });
+    }, function (sender, args) {
+        onFailedCall(sender, args, {
+            name: "updateItems",
+            context: context,
+            err_description: `item with Id ${itemProperties.ID} encountered an error`,
+            resource: listName
+        });
+    });
+}
 
 /**
  * The createItems function creates rows for a specified list in the context used
