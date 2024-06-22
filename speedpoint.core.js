@@ -7632,7 +7632,7 @@ Speed.prototype.getFileFolderExists = function (fileFolderUrl, fileorfolder, onS
  * onQueryFailed is called when all sharepoint async calls fail
  * @param {object} [appContext = {}] instance of the speedpoint app context created, used for o365 Cross Domain Request
  */
-Speed.prototype.logWriter = function (logContent, library, logLimit, callback, onFailed, appContext) {
+Speed.prototype.logWriter = function (logName,logContent, library, logLimit, callback, onFailed, appContext) {
     var speedContext = this;
     var onFailedCall = (typeof onFailed === 'undefined' || onFailed == null) ? this.errorHandler : onFailed;
     var query = [{
@@ -7654,7 +7654,7 @@ Speed.prototype.logWriter = function (logContent, library, logLimit, callback, o
         libraryUrl += "/" + library;
         if (logsCount == 0 || itemDetails.size > logLimit) {
             //this logs of file if no log text file is present or if the log is greater than limit passed
-            var fileName = "SPeedPointErrorLogs-" + speedContext.stringnifyDate({
+            var fileName = `${logName}-` + speedContext.stringnifyDate({
                 includeTime: true,
                 timeSpace: false,
                 format: "dd-mm-yy"
