@@ -7219,25 +7219,11 @@ Speed.prototype.addAttachmentToItem = function (itemID, listName, fileArr, feedb
  * onQueryFailed is called when all sharepoint async calls fail
  * @param {SPContext} [appContext = {}] instance of the speedpoint app context created, used for o365 Cross Domain Request
  */
-Speed.prototype.readFile = function (fileurl, onSuccess, onFailed, appContext) {
+Speed.prototype.readFile = function (fileurl, onSuccess, onFailed) {
     var onFailedCall = (typeof onFailed === 'undefined' || onFailed == null) ? this.errorHandler : onFailed;
-    var ctx = this.initiate();
-    var oWebsite = ctx.get_web();
-    if (typeof appContext !== 'undefined') {
-        ctx = appContext.initiate();
-    }
     var spContext = this;
-    ctx.load(oWebsite);
-    ctx.executeQueryAsync(function () {
-        var fileUrl = fileurl;
-        try {
-            spContext.ajax(fileUrl, "GET", onSuccess, onFailedCall);
-        } catch (e) {
-            spContext.ajax(fileUrl, "GET", onSuccess, onFailedCall);
-        }
-    }, onFailedCall);
+    spContext.ajax(fileurl, "GET", onSuccess, onFailedCall);
 }
-
 
 Speed.prototype.ajax = function (url, verb, success, onfailed) {
     // Creating Our XMLHttpRequest object 
@@ -7250,9 +7236,9 @@ Speed.prototype.ajax = function (url, verb, success, onfailed) {
             //console.log(this.responseText);
             success(this.responseText);
         }
-        else {
+        else if(this.status !== 200){
             if (typeof onfailed !== "undefined") {
-                onfailed(this.responseText);
+                onfailed(this.responseText,null,true);
             }
         }
     }
