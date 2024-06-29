@@ -7608,7 +7608,7 @@ Speed.prototype.getFileFolderExists = function (fileFolderUrl, fileorfolder, onS
 
 /**
  * The logWriter function upload or updates a text file in a Libary, this is used for keeping logs
- * @param {string} fileName the name of the log file
+ * @param {string} logName the name of the log file
  * @param {string} logContent the content of the log file
  * @param {string} library the library where the log file will be saved
  * @param {String} libraryUrl the library url where the files will be uploaded to 
