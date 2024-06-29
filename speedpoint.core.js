@@ -1547,6 +1547,133 @@ Speed.prototype.bind = function (listObjects, bindClass, bindGroup) {
     return (useBindGroup) ? bindGroupData :  returnObject;
 }
 
+Speed.prototype.getFileMetaData = function(listObjects, bindClass){
+
+    var useBindClass = (typeof bindClass === 'string') ? true : false;
+    var returnObject = {};
+    if (typeof listObjects !== "undefined" && listObjects != null) {
+        returnObject = listObjects;
+    }
+    var element = document.querySelectorAll("[speed-file-meta]");
+    for (var i = 0; i <= (element.length - 1); i++) {
+        var docProperty = element[i].getAttribute("speed-file-meta");
+        var omitControl = (element[i].getAttribute("speed-file-meta-omit") === null) ? false : (element[i].getAttribute("speed-file-meta-omit").toLowerCase() === "true");
+        var property = element[i].getAttribute("speed-file-meta-property");
+        if (useBindClass) {
+            var controlClass = (element[i].getAttribute("speed-bind-class") === null) ? "" : element[i].getAttribute("speed-bind-class").toLowerCase();
+            if (controlClass != bindClass.toLowerCase()) {
+                omitControl = true;
+            }
+        }
+
+        if(typeof returnObject[docProperty] === "undefined"){
+            returnObject[docProperty] = {};
+        }
+        if (!omitControl && property !== null) {
+            if (element[i].tagName.toLowerCase() == "input" || element[i].tagName.toLowerCase() == "select" || element[i].tagName.toLowerCase() == "textarea") {
+                if (element[i].type == "checkbox") {
+                    var multivalue = (element[i].getAttribute("sptype") === null) ? false : (element[i].getAttribute("sptype").toLowerCase() === "multivalue");
+                    var jsonlabel = (element[i].getAttribute("spjsonlabel") === null) ? false : (element[i].getAttribute("spjsonlabel").toLowerCase() === "true");
+                    if (multivalue) {
+                        if (typeof returnObject[docProperty][property] === "undefined") {
+                            returnObject[docProperty][property] = JSON.stringify([]);
+                        }
+                        var propertyValues = JSON.parse(returnObject[docProperty][property]);
+
+                        var checkvalue = {
+                            label: (jsonlabel) ? JSON.parse(element[i].getAttribute("sptype-label")) : element[i].getAttribute("sptype-label"),
+                            value: element[i].checked
+                        }
+                        propertyValues.push(checkvalue);
+                        returnObject[docProperty][property] = JSON.stringify(propertyValues);
+                    } else {
+                        returnObject[docProperty][property] = element[i].checked;
+                    }
+                } else if (element[i].type == "radio") {
+                    var multivalue = (element[i].getAttribute("sptype") === null) ? false : (element[i].getAttribute("sptype").toLowerCase() === "multivalue");
+                    var name = (element[i].getAttribute("name") === null) ? "" : element[i].getAttribute("name");
+                    var jsonlabel = (element[i].getAttribute("spjsonlabel") === null) ? false : (element[i].getAttribute("spjsonlabel").toLowerCase() === "true");
+                    var overidevalidation = (element[i].getAttribute("sptype-overide-validation") === null) ? false : (element[i].getAttribute("sptype-overide-validation").toLowerCase() === "true");
+                    if (multivalue) {
+                        if (overidevalidation) {
+                            validationtype = "multivalue";
+                        }
+
+                        if (typeof returnObject[docProperty][property] === "undefined") {
+                            returnObject[docProperty][property] = JSON.stringify({});
+                        }
+
+                        var propertyValues = JSON.parse(returnObject[docProperty][property]);
+                        returnObject[docProperty][property] = $("input[name='" + name + "']:checked").val();
+
+                        var setProperty = element[i].getAttribute("sptype-label");
+                        propertyValues[setProperty] = returnObject[docProperty][property];
+                        returnObject[docProperty][property] = JSON.stringify(propertyValues);
+                    } else {
+                        returnObject[docProperty][property] = $("input[name='" + name + "']:checked").val();
+                    }
+                } else {
+                    var multivalue = (element[i].getAttribute("sptype") === null) ? false : (element[i].getAttribute("sptype").toLowerCase() === "multivalue");
+                    var jsonlabel = (element[i].getAttribute("spjsonlabel") === null) ? false : (element[i].getAttribute("spjsonlabel").toLowerCase() === "true");
+                    if (multivalue) {
+                        if (typeof returnObject[docProperty][property] === "undefined") {
+                            returnObject[docProperty][property] = JSON.stringify({});
+                        }
+                        var propertyValues = JSON.parse(returnObject[docProperty][property]);
+
+                        var currencyUsed = element[i].getAttribute("speed-bind-currency");
+                        if (typeof currencyUsed === "undefined" || currencyUsed == null) {
+                            var value = element[i].value;
+                            var dateFormat = element[i].getAttribute("speed-file-meta-date");
+                            var format = element[i].getAttribute("speed-file-meta-format");
+                            if(dateFormat !== null){
+                                value = $spcontext.stringnifyDate({ value : value, format : format, reconstruct : dateFormat});
+                            }
+                            returnObject[docProperty][property] = value;
+                        } else {
+                            var rawValue = (element[i].getAttribute("speed-currency-numeric") === null) ? false : (element[i].getAttribute("speed-currency-numeric").toLowerCase() === "true");
+                            returnObject[docProperty][property] = speedPointContext.stripCurrencyToNumber(element[i].value, currencyUsed, rawValue)
+                        }
+
+                        /*var checkvalue = {
+                            label: (jsonlabel) ? JSON.parse(element[i].getAttribute("sptype-label")) : element[i].getAttribute("sptype-label"),
+                            value: returnObject[docProperty][property]
+                        }*/
+                        var setProperty = element[i].getAttribute("sptype-label");
+                        propertyValues[setProperty] = returnObject[docProperty][property];
+                        returnObject[docProperty][property] = JSON.stringify(propertyValues);
+                    } else {
+                        var currencyUsed = element[i].getAttribute("speed-bind-currency");
+                        if (typeof currencyUsed === "undefined" || currencyUsed == null) {
+                            var usetext = (element[i].getAttribute("speed-select-text-value") === null) ? false : (element[i].getAttribute("speed-select-text-value").toLowerCase() === "true");
+                            if (usetext) {
+                                var id = element[i].id;
+                                returnObject[docProperty][property] = $("#" + id + " option:selected").text();
+                            } else {
+                                var value = element[i].value;
+                                var dateFormat = element[i].getAttribute("speed-file-meta-date");
+                                var format = element[i].getAttribute("speed-file-meta-format");
+                                if(dateFormat !== null){
+                                    value = $spcontext.stringnifyDate({ value : value, format : format, reconstruct : dateFormat});
+                                }
+                                returnObject[docProperty][property] = value;
+                            }
+
+                        } else {
+                            var rawValue = (element[i].getAttribute("speed-currency-numeric") === null) ? false : (element[i].getAttribute("speed-currency-numeric").toLowerCase() === "true");
+                            returnObject[docProperty][property] = speedPointContext.stripCurrencyToNumber(element[i].value, currencyUsed, rawValue)
+                        }
+                    }
+                }
+            } else{
+                returnObject[docProperty][property] = element[i].innerText;
+            }
+        }
+    }
+
+    return returnObject;
+} 
+
 /**
  * The getAttachmentControls function gets all speed-bind & speed-bind-validate html attributes names
  * @returns {Array} the Array return contains all controls names
@@ -7016,14 +7143,21 @@ Speed.prototype.grabAllAttachments = function (returnDuplicateFiles, allowDuplic
     for (var x in files) {
         for (var y = 0; y < files[x].files.length; y++) {
             if (typeof files[x].files[y] === 'object') {
+                var metadata = this.getFileMetaData()[x];
+                if(typeof metadata !== "undefined"){
+                    files[x].files[y].metadata = metadata;
+                }
+
                 if (duplicateCopiesonly) {
                     if (files[x].files[y].duplicate) {
                         returnArray.push(files[x].files[y]);
                     }
-                } else {
+                } 
+                else {
                     if (!files[x].files[y].duplicate || allowDuplicates) {
                         returnArray.push(files[x].files[y]);
-                    } else {
+                    } 
+                    else {
                         if (typeof this.filesDictionary[files[x].files[y].duplicateProp] === "undefined") {
                             this.filesDictionary[x].files[y].duplicate = false;
                             this.filesDictionary[x].files[y].duplicateRef = [];
