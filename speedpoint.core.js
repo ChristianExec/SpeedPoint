@@ -6155,7 +6155,7 @@ Speed.prototype.isUserMemberOfGroup = function (groupCollection, userDetails, ca
                                     break;
                             }
                         } else if (typeof userDetails.email !== "undefined") {
-                            if (prop.email === userDetails.email) {
+                            if (prop.email.toLowerCase() === userDetails.email.toLowerCase()) {
                                 boolVal = true;
                                 usersArray[groupNames[groupFound]].belongs = true;
                                 if (!returnUsers)
