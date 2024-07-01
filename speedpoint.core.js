@@ -2721,6 +2721,7 @@ Speed.prototype.attachmentLinkBind = function (attachments) {
 }
 
 //Directly bind list to html select
+//Directly bind list to html select
 Speed.prototype.bindListDirectives = function (properties, onFailed, appContext) {
     var spContext = this;
     properties = (typeof properties === "undefined") ? {} : properties;
@@ -2865,12 +2866,20 @@ Speed.prototype.bindListDirectives = function (properties, onFailed, appContext)
                     properties[listName].element = element[i];
                 }
 
-                spContext.htmlDictionary[listName].otherElements.push({
-                    id: element[i].id,
-                    fullString: fullString,
-                    properties: properties
-                })
+                var elementExist = false;
+                for(var y = 0; y <  spContext.htmlDictionary[listName].otherElements.length; y++){
+                    if(spContext.htmlDictionary[listName].otherElements[y].id === element[i].id){
+                        elementExist = true;
+                    }
+                }
 
+                if(!elementExist){
+                    spContext.htmlDictionary[listName].otherElements.push({
+                        id: element[i].id,
+                        fullString: fullString,
+                        properties: properties
+                    });
+                }
 
                 spContext.htmlDictionary[listName].callbackTrigger = function (listNameForAsync) {
                     setTimeout(function () {
@@ -2918,10 +2927,10 @@ Speed.prototype.bindListDirectives = function (properties, onFailed, appContext)
                                     }
                                 }
                                 if (typeof elementNeedingData[z].properties !== "undefined") {
-                                    if (typeof elementNeedingData[z].properties.customFunction !== "undefined") {
-                                        if (typeof elementNeedingData[z].properties.customFunction !== "undefined" && elementNeedingData[z].properties.customFunction != null &&
-                                            typeof elementNeedingData[z].properties.customFunction === "function") {
-                                            elementNeedingData[z].properties.customFunction(listElements, elementNeedingData[z].id);
+                                    if (typeof elementNeedingData[z].properties[listNameForAsync].customFunction !== "undefined") {
+                                        if (typeof elementNeedingData[z].properties[listNameForAsync].customFunction !== "undefined" && elementNeedingData[z].properties[listNameForAsync].customFunction != null &&
+                                            typeof elementNeedingData[z].properties[listNameForAsync].customFunction === "function") {
+                                            elementNeedingData[z].properties[listNameForAsync].customFunction(listElements, elementNeedingData[z].id);
                                         }
                                     }
                                 }
@@ -2931,6 +2940,7 @@ Speed.prototype.bindListDirectives = function (properties, onFailed, appContext)
                     }, 1000);
                 }
 
+                spContext.htmlDictionary[listName].callbackTrigger(listName);
             }
         }
     }
