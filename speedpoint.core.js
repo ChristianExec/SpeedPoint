@@ -2293,11 +2293,11 @@ Speed.prototype.htmlBind = function (listObjects, bindExtensions, bindClass) {
 
                             var htmlElement = (element[i].getAttribute("speed-people-element") !== null) ? (element[i].getAttribute("speed-people-element").toLowerCase() === "true") : "p";
                             if ($.type(listObjects[key]) === "object") {
-                                element[i].innerHTML = "<"+ htmlElement +">" + listObjects[key].value + "</"+ htmlElement +">";
+                                element[i].innerHTML = "<" + htmlElement + ">" + listObjects[key].value + "</" + htmlElement + ">";
                             } else if ($.type(listObjects[key]) === "array") {
                                 var str = "";
                                 for (z = 0; z < listObjects[key].length; z++) {
-                                    str += "<"+ htmlElement +">" + listObjects[key][z].value + "; </"+ htmlElement +">";
+                                    str += "<" + htmlElement + ">" + listObjects[key][z].value + "; </" + htmlElement + ">";
                                 }
                                 element[i].innerHTML = str;
                             }
@@ -2386,13 +2386,27 @@ Speed.prototype.htmlBind = function (listObjects, bindExtensions, bindClass) {
                 elementProp.blockClass = (typeof element[i].getAttribute("speed-MultiCheck-bind-Class") !== null) ?
                     element[i].getAttribute("speed-MultiCheck-bind-Class") : "";
                 elementProp.id = element[i].id;
-                if (element[i].tagName.toLowerCase() === "div" || element[i].tagName.toLowerCase() === "p" || element[i].tagName.toLowerCase() === "ul") {
-                    if ($.type(checkValues) === "array") {
-                        $(element[i]).empty();
-                        for (var x = 0; x < checkValues.length; x++) {
-                            for (var key in checkValues[x]) {
+                var useAutoBinding = (element[i].getAttribute("speed-bind-auto") !== null) ? (element[i].getAttribute("speed-bind-auto").toLowerCase() === "true") : true;
+                if(useAutoBinding){
+                    if (element[i].tagName.toLowerCase() === "div" || element[i].tagName.toLowerCase() === "p" || element[i].tagName.toLowerCase() === "ul") {
+                        if ($.type(checkValues) === "array") {
+                            $(element[i]).empty();
+                            for (var x = 0; x < checkValues.length; x++) {
+                                for (var key in checkValues[x]) {
+                                    var check = "";
+                                    if (checkValues[x][key] === "true" || checkValues[x][key]) {
+                                        check = "checked";
+                                    }
+                                    var str = "<label class='speed-multi-check " + elementProp.blockClass + "'><input id='" + $spcontext.uniqueIdGenerator() + "' " +
+                                        "type='checkbox' " + check + " sptype-label='" + key + "'>" + key + "</label>";
+                                    $(element[i]).append(str);
+                                }
+                            }
+                        } else {
+                            $(element[i]).empty();
+                            for (var key in checkValues) {
                                 var check = "";
-                                if (checkValues[x][key] === "true" || checkValues[x][key]) {
+                                if (checkValues[key] === "true" || checkValues[key]) {
                                     check = "checked";
                                 }
                                 var str = "<label class='speed-multi-check " + elementProp.blockClass + "'><input id='" + $spcontext.uniqueIdGenerator() + "' " +
@@ -2400,23 +2414,14 @@ Speed.prototype.htmlBind = function (listObjects, bindExtensions, bindClass) {
                                 $(element[i]).append(str);
                             }
                         }
-                    } else {
-                        $(element[i]).empty();
-                        for (var key in checkValues) {
-                            var check = "";
-                            if (checkValues[key] === "true" || checkValues[key]) {
-                                check = "checked";
-                            }
-                            var str = "<label class='speed-multi-check " + elementProp.blockClass + "'><input id='" + $spcontext.uniqueIdGenerator() + "' " +
-                                "type='checkbox' " + check + " sptype-label='" + key + "'>" + key + "</label>";
-                            $(element[i]).append(str);
-                        }
                     }
                 }
+                
             }
         }
     }
 }
+
 
 Speed.prototype.dynamicTable = function (key, config) {
     var speedContext = this;
