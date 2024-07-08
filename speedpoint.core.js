@@ -1626,7 +1626,7 @@ Speed.prototype.getFileMetaData = function(listObjects, bindClass){
                             var value = element[i].value;
                             var dateFormat = element[i].getAttribute("speed-file-meta-date");
                             var format = element[i].getAttribute("speed-file-meta-format");
-                            if(dateFormat !== null){
+                            if(dateFormat !== null && value !== ""){
                                 value = $spcontext.stringnifyDate({ value : value, format : format, reconstruct : dateFormat});
                             }
                             returnObject[docProperty][property] = value;
@@ -1653,7 +1653,7 @@ Speed.prototype.getFileMetaData = function(listObjects, bindClass){
                                 var value = element[i].value;
                                 var dateFormat = element[i].getAttribute("speed-file-meta-date");
                                 var format = element[i].getAttribute("speed-file-meta-format");
-                                if(dateFormat !== null){
+                                if(dateFormat !== null && value !== ""){
                                     value = $spcontext.stringnifyDate({ value : value, format : format, reconstruct : dateFormat});
                                 }
                                 returnObject[docProperty][property] = value;
