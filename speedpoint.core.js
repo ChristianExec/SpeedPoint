@@ -3469,8 +3469,13 @@ Speed.prototype.updateList = function (resourceProperties, callback, onFailed, a
     window.speedGlobal.push(requestList);
     var total = window.speedGlobal.length;
     total--;
-    window.speedGlobal[total].set_title(resourceProperties.newtitle);
-    window.speedGlobal[total].set_description(resourceProperties.description);
+    if(typeof resourceProperties.newtitle !== "undefined"){
+        window.speedGlobal[total].set_title(resourceProperties.newtitle);
+    }
+    
+    if(typeof resourceProperties.description !== "undefined"){
+        window.speedGlobal[total].set_description(resourceProperties.description);
+    }
 
     if(resourceProperties.users.length > 0 || resourceProperties.group.length > 0){
         window.speedGlobal[total].breakRoleInheritance(false, true);
