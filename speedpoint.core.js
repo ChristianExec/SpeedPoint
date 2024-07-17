@@ -3458,6 +3458,7 @@ Speed.prototype.updateList = function (resourceProperties, callback, onFailed, a
 
     resourceProperties.users = (typeof resourceProperties.users === 'undefined') ? [] : resourceProperties.users;
     resourceProperties.group = (typeof resourceProperties.group === 'undefined') ? [] : resourceProperties.group;
+    resourceProperties.clearExistingRoles = (typeof resourceProperties.clearExistingRoles === 'undefined') ? true : resourceProperties.clearExistingRoles;
 
     var clientContext = this.initiate();
     var oWebsite = clientContext.get_web();
@@ -3485,8 +3486,10 @@ Speed.prototype.updateList = function (resourceProperties, callback, onFailed, a
         clientContext.load(allGroups);
         clientContext.executeQueryAsync(function () {
 
-            while (window.speedGlobal[total].get_roleAssignments().get_count() > 0) {
-                window.speedGlobal[total].get_roleAssignments().itemAt(0).deleteObject();
+            if(resourceProperties.clearExistingRoles){
+                while (window.speedGlobal[total].get_roleAssignments().get_count() > 0) {
+                    window.speedGlobal[total].get_roleAssignments().itemAt(0).deleteObject();
+                }
             }
 
             var count = allGroups.get_count();
@@ -3550,7 +3553,6 @@ Speed.prototype.updateList = function (resourceProperties, callback, onFailed, a
     }
     
 }
-
 Speed.prototype.getAllListInSite = function (callback, onFailed, appContext) {
     var speedContext = this;
     var onFailedCall = (typeof onFailed === 'undefined') ? this.errorHandler : onFailed;
