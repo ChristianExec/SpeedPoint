@@ -2415,8 +2415,54 @@ Speed.prototype.htmlBind = function (listObjects, bindExtensions, bindClass) {
                             }
                         }
                     }
+                } 
+            }
+
+            var element = document.querySelectorAll("[speed-file-meta='" + key + "']");
+            if (element.length > 0) {
+                for (var i = 0; i <= (element.length - 1); i++) {
+                    var property = element[i].getAttribute("speed-file-meta-property");
+                    var useAutoBinding = (element[i].getAttribute("speed-bind-auto") !== null) ? (element[i].getAttribute("speed-bind-auto").toLowerCase() === "true") : true;
+                    if (useBindClass) {
+                        var controlClass = (element[i].getAttribute("speed-bind-class") === null) ? "" : element[i].getAttribute("speed-bind-class").toLowerCase();
+                        if (controlClass != bindClass.toLowerCase()) {
+                            useAutoBinding = false;
+                        }
+                    }
+                    if (useAutoBinding && typeof listObjects[key] !== "undefined") {
+                        if(typeof listObjects[key][property] !== "undefined"){
+                            if (element[i].tagName.toLowerCase() == "input" || element[i].tagName.toLowerCase() == "textarea") {
+                                if (element[i].type === "radio") {
+                                    if (listObjects[key][property] !== "")
+                                        $("input:radio[name='" + element[i].name + "'][value='" + listObjects[key][property] + "']").prop('checked', true);
+                                } else if (element[i].type !== "checkbox") {
+                                    var currencyUsed = element[i].getAttribute("speed-bind-currency");
+                                    if (typeof currencyUsed === "undefined" || currencyUsed == null) {
+                                        element[i].value = listObjects[key][property];
+                                    } else {
+                                        element[i].value = currencyUsed + speedContext.numberWithCommas(listObjects[key][property]);
+                                    }
+                                } else {
+                                    if (typeof listObjects[key][property] === "string") {
+                                        if (listObjects[key][property] !== "")
+                                            element[i].checked = (listObjects[key][property].toLowerCase() === "true");
+                                    } else {
+                                        element[i].checked = listObjects[key][property];
+                                    }
+                                }
+                            } else if (element[i].tagName.toLowerCase() == "select") {
+                                $("#" + element[i].id).val(listObjects[key][property]);
+                            } else {
+                                var currencyUsed = element[i].getAttribute("speed-bind-currency");
+                                if (typeof currencyUsed === "undefined" || currencyUsed == null) {
+                                    element[i].innerHTML = $spcontext.replaceSpecialkeysinString(listObjects[key][property]);
+                                } else {
+                                    element[i].innerHTML = currencyUsed + speedContext.numberWithCommas(listObjects[key][property]);
+                                }
+                            }
+                        }
+                    }
                 }
-                
             }
         }
     }
