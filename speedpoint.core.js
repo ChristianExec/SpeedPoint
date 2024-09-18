@@ -351,6 +351,24 @@ function Speed(cxt, bolval) {
                     return true;
             }
         },
+        "datetime-local": {
+            type: "datetime-local",
+            extend: {
+
+            },
+            validate: function (value, extension, id) {
+                if (extension !== "") {
+                    try {
+                        return this.extend[extension](value, id);
+                    } catch (e) {
+                        $spcontext.debugHandler("1111", this.type, id, extension);
+                    }
+                } else if (typeof value === "undefined" || value === "") {
+                    return false;
+                } else
+                    return true;
+            }
+        },
         "checkbox": {
             type: "checkbox",
             extend: {
