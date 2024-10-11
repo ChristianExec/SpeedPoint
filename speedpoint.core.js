@@ -6122,7 +6122,7 @@ Speed.prototype.retrieveMultipleGroupUsers = function (groupCollection, callback
                         prop.login = oUser.get_loginName();
                         var userExist = false
                         for (var y = 0; y <= (users.length - 1); y++) {
-                            if (users[y].logon == prop.logon) {
+                            if (users[y].logon.toLowerCase() == prop.logon.toLowerCase()) {
                                 userExist = true;
                                 break;
                             }
@@ -6220,14 +6220,14 @@ Speed.prototype.isUserMemberOfGroup = function (groupCollection, userDetails, ca
                         prop.loginFull = oUser.get_loginName();
                         prop.login = prop.loginFull.SPLoginFromFullLogin();
                         if (typeof userDetails.login !== "undefined") {
-                            if (prop.login === userDetails.login) {
+                            if (prop.login.toLowerCase() === userDetails.login.toLowerCase()) {
                                 boolVal = true;
                                 usersArray[groupNames[groupFound]].belongs = true;
                                 if (!returnUsers)
                                     break;
                             }
                         } else if (typeof userDetails.loginFull !== "undefined") {
-                            if (prop.loginFull === userDetails.loginFull) {
+                            if (prop.loginFull.toLowerCase() === userDetails.loginFull.toLowerCase()) {
                                 boolVal = true;
                                 usersArray[groupNames[groupFound]].belongs = true;
                                 if (!returnUsers)
