@@ -3806,6 +3806,9 @@ Speed.prototype.updateItems = function (arr, listName, onSuccess, onFailed, appC
             //context.load(passwordList);
             speedContext.updateItemsTracker(0, arr, updateList, context, listName,onSuccess, onFailedCall);
         }
+        else{
+            onSuccess();
+        }
     }
 };
 
