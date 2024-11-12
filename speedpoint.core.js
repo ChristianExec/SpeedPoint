@@ -5088,7 +5088,7 @@ Speed.prototype.dataUriFormFileSrc = function (prop, callBack, onFailed) {
                 } else {
                     var dataURL = b64;
                 }
-                callBack(dataURL, url);
+                callBack(dataURL, prop);
             } else {
                 var speedError = {};
                 speedError.errorObject = this;
