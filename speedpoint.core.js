@@ -6679,76 +6679,79 @@ Speed.prototype.createFolder = function (foldername, libraryProperties, onSucces
         libraryProperties.breakRoleInheritance = false;
     }
     var context = this.initiate();
-    var docLib = context.get_web().get_lists().getByTitle(libraryProperties.libraryName);
-    var itemCreateInfo = new SP.ListItemCreationInformation();
-    itemCreateInfo.set_underlyingObjectType(SP.FileSystemObjectType.folder);
-    itemCreateInfo.set_leafName(foldername);
 
-    window.speedGlobal.push(docLib.addItem(itemCreateInfo));
-    var total = window.speedGlobal.length;
-    total--;
+    speedContext.SPGroupDetailsForFolderPermissions({ count: 0, context: context, groups: libraryProperties.groups }, function () {
+        var docLib = context.get_web().get_lists().getByTitle(libraryProperties.libraryName);
+        var itemCreateInfo = new SP.ListItemCreationInformation();
+        itemCreateInfo.set_underlyingObjectType(SP.FileSystemObjectType.folder);
+        itemCreateInfo.set_leafName(foldername);
 
-    if (typeof libraryProperties.metadata !== "undefined") {
-        for (var propName in libraryProperties.metadata) {
-            if (propName.toLowerCase() != "id") {
-                window.speedGlobal[total].set_item(propName, libraryProperties.metadata[propName]);
+        window.speedGlobal.push(docLib.addItem(itemCreateInfo));
+        var total = window.speedGlobal.length;
+        total--;
+
+        if (typeof libraryProperties.metadata !== "undefined") {
+            for (var propName in libraryProperties.metadata) {
+                if (propName.toLowerCase() != "id") {
+                    window.speedGlobal[total].set_item(propName, libraryProperties.metadata[propName]);
+                }
             }
         }
-    }
 
-    window.speedGlobal[total].update();
-    if (typeof appContext !== 'undefined') {
-        context = appContext.initiate();
-    }
-    context.load(window.speedGlobal[total]);
-    context.executeQueryAsync(function () {
-        if (libraryProperties.breakRoleInheritance) {
-            window.speedGlobal[total].breakRoleInheritance(false, false);
-            var oWebsite = context.get_web();
-            //group object already created and set in properties array to make the call faster
-            for (var x = 0; x < libraryProperties.groups.length; x++) {
-                var role = SP.RoleDefinitionBindingCollection.newObject(context);
-                role.add(oWebsite.get_roleDefinitions().getByType(libraryProperties.groups[x].role));
-                window.speedGlobal[total].get_roleAssignments().add(libraryProperties.groups[x].group, role);
+        window.speedGlobal[total].update();
+        if (typeof appContext !== 'undefined') {
+            context = appContext.initiate();
+        }
+        context.load(window.speedGlobal[total]);
+        context.executeQueryAsync(function () {
+            if (libraryProperties.breakRoleInheritance) {
+                window.speedGlobal[total].breakRoleInheritance(false, false);
+                var oWebsite = context.get_web();
+                for (var x = 0; x < libraryProperties.users.length; x++) {
+                    var userobj = oWebsite.ensureUser(libraryProperties.users[x].login);
+                    var role = SP.RoleDefinitionBindingCollection.newObject(context);
+                    role.add(oWebsite.get_roleDefinitions().getByType(libraryProperties.users[x].role));
+                    window.speedGlobal[total].get_roleAssignments().add(userobj, role);
+                }
+
+                //group object already created and set in properties array to make the call faster
+                for (var x = 0; x < libraryProperties.groups.length; x++) {
+                    var role = SP.RoleDefinitionBindingCollection.newObject(context);
+                    role.add(oWebsite.get_roleDefinitions().getByType(libraryProperties.groups[x].role));
+                    window.speedGlobal[total].get_roleAssignments().add(speedContext.folderGroups[libraryProperties.groups[x].name], role);
+                }
+
+                context.load(window.speedGlobal[total]);
+                context.executeQueryAsync(function () {
+                    setTimeout(function () {
+                        onSuccess(window.speedGlobal[total], foldername, libraryProperties.libraryName);
+                    }, 1000);
+                }, function (sender, args) {
+                    onFailedCall(sender, args, {
+                        name: "createFolder",
+                        context: speedContext,
+                        err_description: "failed to create roles for folder created",
+                        resource: foldername
+                    });
+                });
             }
-
-            for (var x = 0; x < libraryProperties.users.length; x++) {
-                var userobj = oWebsite.ensureUser(libraryProperties.users[x].login);
-                var role = SP.RoleDefinitionBindingCollection.newObject(context);
-                role.add(oWebsite.get_roleDefinitions().getByType(libraryProperties.users[x].role));
-                window.speedGlobal[total].get_roleAssignments().add(userobj, role);
-            }
-
-            context.load(window.speedGlobal[total]);
-            context.executeQueryAsync(function () {
+            else {
                 setTimeout(function () {
                     onSuccess(window.speedGlobal[total], foldername, libraryProperties.libraryName);
                 }, 1000);
-            }, function (sender, args) {
-                onFailedCall(sender, args, {
-                    name: "createFolder",
-                    context: speedContext,
-                    err_description: "failed to create roles for folder created",
-                    resource: foldername
-                });
+            }
+
+        }, function (sender, args) {
+            onFailedCall(sender, args, {
+                name: "createFolder",
+                context: speedContext,
+                err_description: "",
+                resource: foldername
             });
-        }
-        else {
-            setTimeout(function () {
-                onSuccess(window.speedGlobal[total], foldername, libraryProperties.libraryName);
-            }, 1000);
-        }
-
-    }, function (sender, args) {
-        onFailedCall(sender, args, {
-            name: "createFolder",
-            context: speedContext,
-            err_description: "",
-            resource: foldername
         });
-    });
-}
+    })
 
+}
 /**
  * The createSubFolder function creates a folder and subfolders in a document library
  * @param {Array} foldernames an array of folder names. the order determines the order of the creation of subfolders
