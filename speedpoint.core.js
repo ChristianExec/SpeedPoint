@@ -43,7 +43,7 @@ function Speed(cxt, bolval) {
         numeric: [],
         attachments: []
     };
-
+    this.folderGroups = {};
     this.asyncDictionary = {
         totalcalls: 0,
         expectedcalls: 0,
@@ -3875,41 +3875,79 @@ Speed.prototype.createItems = function (arr, listProperties, onSuccess, onFailed
         if (arr.length != 0) {
             var listitemArr = [];
             var context = this.initiate();
-            var reqList = context.get_web().get_lists().getByTitle(listProperties.listName);
-            if (typeof appContext !== 'undefined') {
-                context = appContext.initiate();
-            }
-            $.each(arr, function (i, itemProperties) {
-                var itemCreateInfo = new SP.ListItemCreationInformation();
-                if (typeof listProperties.folderUrl === "string") {
-                    itemCreateInfo.set_folderUrl(listProperties.folderUrl);
+            speedContext.SPGroupDetailsForFolderPermissions({ count: 0, context: context, groups: listProperties.groups }, function () {
+                var reqList = context.get_web().get_lists().getByTitle(listProperties.listName);
+                if (typeof appContext !== 'undefined') {
+                    context = appContext.initiate();
                 }
-                var listItem = reqList.addItem(itemCreateInfo);
-                for (var propName in itemProperties) {
-                    if (propName.toLowerCase() != "id") {
-                        listItem.set_item(propName, itemProperties[propName]);
+                $.each(arr, function (i, itemProperties) {
+                    var itemCreateInfo = new SP.ListItemCreationInformation();
+                    if (typeof listProperties.folderUrl === "string") {
+                        itemCreateInfo.set_folderUrl(listProperties.folderUrl);
                     }
-                }
-                listItem.update();
-                context.load(listItem);
-                listitemArr.push(listItem);
-            });
-            context.executeQueryAsync(function () {
-                setTimeout(function () {
-                    onSuccess(listitemArr);
-                }, 1000);
-            }, function (sender, args) {
-                onFailedCall(sender, args, {
-                    name: "createItems",
-                    context: speedContext,
-                    err_description: "",
-                    resource: listProperties.listName
+                    var listItem = reqList.addItem(itemCreateInfo);
+                    for (var propName in itemProperties) {
+                        if (propName.toLowerCase() != "id") {
+                            listItem.set_item(propName, itemProperties[propName]);
+                        }
+                    }
+                    listItem.update();
+                    context.load(listItem);
+                    listitemArr.push(listItem);
                 });
-            });
+                context.executeQueryAsync(function () {
+                    /**/
+                    if (listProperties.breakRoleInheritance) {
+                        for(var y = 0; y < listitemArr.length; y++){
+                            listitemArr[y].breakRoleInheritance(false, false);
+                            var oWebsite = context.get_web();
+                            for (var x = 0; x < listProperties.users.length; x++) {
+                                var userobj = oWebsite.ensureUser(listProperties.users[x].login);
+                                var role = SP.RoleDefinitionBindingCollection.newObject(context);
+                                role.add(oWebsite.get_roleDefinitions().getByType(listProperties.users[x].role));
+                                listitemArr[y].get_roleAssignments().add(userobj, role);
+                            }
+            
+                            //group object already created and set in properties array to make the call faster
+                            for (var x = 0; x < listProperties.groups.length; x++) {
+                                var role = SP.RoleDefinitionBindingCollection.newObject(context);
+                                role.add(oWebsite.get_roleDefinitions().getByType(listProperties.groups[x].role));
+                                listitemArr[y].get_roleAssignments().add(speedContext.folderGroups[listProperties.groups[x].name], role);
+                            }
+                            context.load(listitemArr[y]);
+                        }
+        
+                        context.executeQueryAsync(function () {
+                            setTimeout(function () {
+                                onSuccess(listitemArr);
+                            }, 1000);
+                        }, function (sender, args) {
+                            onFailedCall(sender, args, {
+                                name: "createItems",
+                                context: speedContext,
+                                err_description: "failed to create roles for items created",
+                                resource: foldername
+                            });
+                        });
+                    }
+                    else {
+                        setTimeout(function () {
+                            onSuccess(listitemArr);
+                        }, 1000);
+                    }
+
+                }, function (sender, args) {
+                    onFailedCall(sender, args, {
+                        name: "createItems",
+                        context: speedContext,
+                        err_description: "",
+                        resource: listProperties.listName
+                    });
+                });
+            })
         }
     }
 };
-
 /**
  * The createItems function creates rows for a specified list in the context used
  * @param {String} listname this parameter specifices the list which the row is to be deleted
@@ -5999,6 +6037,46 @@ Speed.prototype.SPGroupDetails = function (group, callback, onFailed) {
             resource: group
         });
     });
+}
+
+Speed.prototype.SPGroupDetailsForFolderPermissions = function (groupsInformation, callback, onFailed) {
+    if (typeof groupsInformation.groups !== "undefined") {
+        var speedContext = this;
+        var onFailedCall = (typeof onFailed === 'undefined') ? this.errorHandler : onFailed;
+        var clientContext = groupsInformation.context;
+        var collGroup = groupsInformation.context.get_web().get_siteGroups();
+        var oGroup = collGroup.getByName(groupsInformation.groups[groupsInformation.count].name);
+        window.speedGlobal.push(oGroup);
+        var total = window.speedGlobal.length;
+        total--;
+        clientContext.load(window.speedGlobal[total]);
+        clientContext.executeQueryAsync(function () {
+            setTimeout(function () {
+                //callback(window.speedGlobal[total]);
+                var groupName = window.speedGlobal[total].get_loginName();
+                speedContext.folderGroups[groupName] = window.speedGlobal[total];
+                if (groupsInformation.count === (groupsInformation.groups.length - 1)) {
+                    callback();
+                }
+                else {
+                    groupsInformation.count++;
+                    speedContext.SPGroupDetailsForFolderPermissions(groupsInformation, callback, onFailed)
+                }
+
+            }, 1000);
+        }, function (sender, args) {
+            onFailedCall(sender, args, {
+                name: "SPGroupDetails",
+                context: speedContext,
+                err_description: "",
+                resource: group
+            });
+        });
+    }
+    else {
+        callback();
+    }
+
 }
 
 //-----------reterieve all users in a group 2013----------
