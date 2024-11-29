@@ -412,7 +412,7 @@ function Speed(cxt, bolval) {
             extend: {
                 File: function (value) {
                     //var rg1 = /^[^\\/:\*\?"<>\|\,]+$/; // forbidden characters \ / : * ? " < > |
-                    var rg1 = /[!@#$%^&*()+{}\[\]:;<>,?~\\/]/
+                    var rg1 = /[!@#$%^&*'()+{}\[\]:;<>,?~\\/]/
                     var rg2 = /^\./; // cannot start with dot (.)
                     var rg3 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
                     return (!rg1.test(value) && !rg2.test(value) && !rg3.test(value));
@@ -479,13 +479,13 @@ function Speed(cxt, bolval) {
                 },
                 File: function (value) {
                     //var rg1 = /^[^\\/:\*\?"<>\|\,]+$/; // forbidden characters \ / : * ? " < > |
-                    var rg1 = /[!@#$%^&*()+{}\[\]:;<>,?~\\/]/
+                    var rg1 = /[!@#$%^&*'()+{}\[\]:;<>,?~\\/]/
                     var rg2 = /^\./; // cannot start with dot (.)
                     var rg3 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
                     return (!rg1.test(value) && !rg2.test(value) && !rg3.test(value));
                 },
                 Folder: function (value) {
-                    var rg1 = /[!@#$%^&*()+{}\[\]:;<>,.?~\\/]/
+                    var rg1 = /[!@#$%^&*'()+{}\[\]:;<>,.?~\\/]/
                     var rg3 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
                     return (!rg1.test(value) && !rg3.test(value));
                 }
