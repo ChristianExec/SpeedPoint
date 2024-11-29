@@ -415,7 +415,8 @@ function Speed(cxt, bolval) {
                     var rg1 = /[!@#$%^&*'()+{}\[\]:;<>,?~\\/]/
                     var rg2 = /^\./; // cannot start with dot (.)
                     var rg3 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
-                    return (!rg1.test(value) && !rg2.test(value) && !rg3.test(value));
+                    var rg4 = /^(?!.*\.\.).*$/; //can not have two consequitve dots
+                    return (!rg1.test(value) && !rg2.test(value) && !rg3.test(value) && rg4.test(value));
                 }
             },
             validate: function (value, extension, id) {
@@ -482,7 +483,8 @@ function Speed(cxt, bolval) {
                     var rg1 = /[!@#$%^&*'()+{}\[\]:;<>,?~\\/]/
                     var rg2 = /^\./; // cannot start with dot (.)
                     var rg3 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
-                    return (!rg1.test(value) && !rg2.test(value) && !rg3.test(value));
+                    var rg4 = /^(?!.*\.\.).*$/; //can not have two consequitve dots
+                    return (!rg1.test(value) && !rg2.test(value) && !rg3.test(value) && rg4.test(value));
                 },
                 Folder: function (value) {
                     var rg1 = /[!@#$%^&*'()+{}\[\]:;<>,.?~\\/]/
