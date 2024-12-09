@@ -8177,7 +8177,7 @@ Speed.prototype.manualTable = function (tableData, settings) {
         $('#' + this.DataForTable.tablecontentId).append(str);
         this.DataForTable.paginateLinks(this.DataForTable.currentPos, this.DataForTable.paginateSize, this.DataForTable);
         $("#" + this.DataForTable.paginationbId + " li a." + this.DataForTable.tablecontentId + "-moveback").hide();
-        $("#" + this.DataForTable.paginationbId + " li a." + this.DataForTable.tablecontentId + "-moveback").hide();
+        $("#" + this.DataForTable.paginationuId + " li a." + this.DataForTable.tablecontentId + "-moveback").hide();
         if (this.DataForTable.noOfPages <= this.DataForTable.paginateSize) {
             $("#" + this.DataForTable.paginationbId + " li a." + this.DataForTable.tablecontentId + "-movefront").hide();
             $("#" + this.DataForTable.paginationuId + " li a." + this.DataForTable.tablecontentId + "-movefront").hide();
