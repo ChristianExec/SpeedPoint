@@ -74,7 +74,7 @@ function Speed(cxt, bolval) {
         tablecontentId: "",
         includeSN: true,
         modifyTR: false,
-        context: this,
+        context: null,
         lazyLoadInitiated: false,
         tdClick: {},
         serverDeliverySettings: {},
@@ -158,16 +158,16 @@ function Speed(cxt, bolval) {
                             useTD = (typeof useTD !== "undefined") ? (useTD === "true") : true;
                             if (settings.propertiesHandler.hasOwnProperty(groupName)) {
                                 if (useTD) {
-                                    str += "<td>" + settings.propertiesHandler[groupName](settings.tabledata[previousItem], previousItem, propName) + "</td>";
+                                    str += "<td>" + settings.propertiesHandler[groupName](settings.tabledata[previousItem], previousItem, propName,this) + "</td>";
                                 } else
-                                    str += settings.propertiesHandler[propName](settings.tabledata[previousItem], previousItem, propName);
+                                    str += settings.propertiesHandler[propName](settings.tabledata[previousItem], previousItem, propName,this);
                             }
                             else if (settings.propertiesHandler.hasOwnProperty(propName)) {
                                 if (useTD) {
-                                    str += "<td>" + settings.propertiesHandler[propName](settings.tabledata[previousItem], previousItem) + "</td>";
+                                    str += "<td>" + settings.propertiesHandler[propName](settings.tabledata[previousItem], previousItem, propName,this) + "</td>";
                                 } else
-                                    str += settings.propertiesHandler[propName](settings.tabledata[previousItem], previousItem);
-                            }  else
+                                    str += settings.propertiesHandler[propName](settings.tabledata[previousItem], previousItem, propName,this);
+                            } else
                                 str += "<td>" + settings.tabledata[previousItem][propName] + "</td>";
                         }
                         str += "</tr>";
@@ -211,6 +211,7 @@ function Speed(cxt, bolval) {
         moveLinks: function (id, settings) {
             if (id == "front") {
                 settings.currentPos = settings.currentPos + settings.paginateSize;
+                settings.noOfPages = Math.ceil(settings.tabledata.length / settings.pagesize);
                 var startPos = settings.currentPos;
                 var endPos = startPos + settings.paginateSize - 1;
                 if (endPos >= settings.noOfPages) {
@@ -235,6 +236,7 @@ function Speed(cxt, bolval) {
             } else if (id == "same") {
                 var startPos = settings.currentPos;
                 var endPos = startPos + settings.paginateSize - 1;
+                settings.noOfPages = Math.ceil(settings.tabledata.length / settings.pagesize);
                 if (endPos >= settings.noOfPages) {
                     endPos = settings.noOfPages;
                 }
@@ -258,6 +260,7 @@ function Speed(cxt, bolval) {
                 settings.currentPos = settings.currentPos - settings.paginateSize;
                 var startPos = settings.currentPos;
                 var endPos = startPos + settings.paginateSize - 1;
+                settings.noOfPages = Math.ceil(settings.tabledata.length / settings.pagesize);
                 if (startPos <= 1) {
                     startPos = 1;
                     currentPos = 1;
@@ -618,38 +621,18 @@ Speed.prototype.loadSPDependencies = function (callBack, properties, scriptbase)
         }
         else {
             //workbenchmode
-            var dependencyCount = 0;
-            var dependencyExp = 4;
             $.getScript((scriptbase + "init.js"), function () {
-                dependencyCount++;
-                if (dependencyCount == dependencyExp) {
-                    callBack();
-                }
+                $.getScript((scriptbase + "MicrosoftAjax.js"), function () {
+                    $.getScript((scriptbase + "SP.Runtime.js"), function () {
+                        $.getScript((scriptbase + "SP.js"), function () {
+                            callBack();
+                        }).fail(function () {
+                            console.log("Fail to load sp.js library")
+                        })
+                    })
+                });
             });
-            $.getScript((scriptbase + "MicrosoftAjax.js"), function () {
-                dependencyCount++;
-                if (dependencyCount == dependencyExp) {
-                    callBack();
-                }
-            });
-            $.getScript((scriptbase + "SP.Runtime.js"), function () {
-                dependencyCount++;
-                if (dependencyCount == dependencyExp) {
-                    callBack();
-                }
-            })
-
-            $.getScript((scriptbase + "SP.js"), function () {
-                dependencyCount++;
-                if (dependencyCount == dependencyExp) {
-                    callBack();
-                }
-            }).fail(function () {
-                dependencyCount++;
-                if (dependencyCount == dependencyExp) {
-                    callBack();
-                }
-            })
+        
         }
     }
 }
@@ -699,7 +682,7 @@ Speed.prototype.camlBuilder = function (cal) {
         if (typeof cal[0].evaluator == 'undefined') cal[0].evaluator = 'And';
         var queryString = (typeof cal[0].viewScope == 'undefined') ? '<View><Query>' : '<View Scope=\'' + cal[0].viewScope + '\'><Query>';
 
-        if(typeof cal[0].groupBy !== 'undefined'){
+        if (typeof cal[0].groupBy !== 'undefined') {
             queryString += `<GroupBy><FieldRef Name="${cal[0].groupBy}" /></GroupBy>`
         }
 
@@ -742,7 +725,7 @@ Speed.prototype.camlBuilder = function (cal) {
         var queryString = '<View><Query>';
         if (typeof cal != 'undefined') {
             queryString = (typeof cal[0].viewScope == 'undefined') ? '<View><Query>' : '<View Scope=\'' + cal[0].viewScope + '\'><Query>';
-            if(typeof cal[0].groupBy !== 'undefined'){
+            if (typeof cal[0].groupBy !== 'undefined') {
                 queryString += `<GroupBy><FieldRef Name="${cal[0].groupBy}" /></GroupBy>`
             }
             if (typeof cal[0].ascending != 'undefined' && typeof cal[0].orderby != 'undefined')
@@ -839,14 +822,14 @@ Speed.prototype.formQueryArrayGenerator = function (listObjects) {
         propertyAttributes.val = "";
         propertyAttributes.lookup = {
             title: "LookupId",
-            value : "TRUE"
+            value: "TRUE"
         };
         var omitControl = (element[i].getAttribute("speed-as-static") === null) ? false : (element[i].getAttribute("speed-as-static").toLowerCase() === "true");
         if (!omitControl && element[i].getAttribute("speed-operator") !== null) {
             var value = $spcontext.checkNull(element[i].getAttribute("speed-userid"));
             propertyAttributes.val = value;
             returnObject.push(propertyAttributes);
-            
+
         }
     }
     return returnObject;
@@ -1105,13 +1088,19 @@ Speed.prototype.bind = function (listObjects, bindClass, bindGroup) {
                     }
 
                 }
-            } else{
-                returnObject[property] = element[i].innerText;
+            } else {
+                var currencyUsed = element[i].getAttribute("speed-bind-currency");
+                if (typeof currencyUsed === "undefined" || currencyUsed == null) {
+                    returnObject[property] = element[i].innerText;
+                } else {
+                    var rawValue = (element[i].getAttribute("speed-currency-numeric") === null) ? false : (element[i].getAttribute("speed-currency-numeric").toLowerCase() === "true");
+                    returnObject[property] = speedPointContext.stripCurrencyToNumber(element[i].innerText, currencyUsed, rawValue)
+                }
             }
-            
-            if(useBindGroup){
+
+            if (useBindGroup) {
                 var controlGroup = (element[i].getAttribute("speed-bind-group") === null) ? "" : element[i].getAttribute("speed-bind-group").toLowerCase();
-                if(typeof bindGroupData[controlGroup] === "undefined"){
+                if (typeof bindGroupData[controlGroup] === "undefined") {
                     bindGroupData[controlGroup] = {};
                 }
                 bindGroupData[controlGroup][property] = returnObject[property];
@@ -1232,9 +1221,9 @@ Speed.prototype.bind = function (listObjects, bindClass, bindGroup) {
 
                 }
 
-                if(useBindGroup){
+                if (useBindGroup) {
                     var controlGroup = (elementValidate[i].getAttribute("speed-bind-group") === null) ? "" : elementValidate[i].getAttribute("speed-bind-group").toLowerCase();
-                    if(typeof bindGroupData[controlGroup] === "undefined"){
+                    if (typeof bindGroupData[controlGroup] === "undefined") {
                         bindGroupData[controlGroup] = {};
                     }
                     bindGroupData[controlGroup][property] = returnObject[property];
@@ -1335,10 +1324,10 @@ Speed.prototype.bind = function (listObjects, bindClass, bindGroup) {
                         });
                 }
 
-                if(!omitControl){
-                    if(useBindGroup){
+                if (!omitControl) {
+                    if (useBindGroup) {
                         var controlGroup = (elementPeople[i].getAttribute("speed-bind-group") === null) ? "" : elementPeople[i].getAttribute("speed-bind-group").toLowerCase();
-                        if(typeof bindGroupData[controlGroup] === "undefined"){
+                        if (typeof bindGroupData[controlGroup] === "undefined") {
                             bindGroupData[controlGroup] = {};
                         }
                         bindGroupData[controlGroup][property] = returnObject[property];
@@ -1363,7 +1352,7 @@ Speed.prototype.bind = function (listObjects, bindClass, bindGroup) {
                 omitControl = true;
             }
         }
-        var validate = (elementValidate[i].getAttribute("speed-table-validate") === null) ? true : (elementValidate[i].getAttribute("speed-table-validate").toLowerCase() === "true");
+        var validate = (elementValidate[i].getAttribute("speed-validate-mode") === null) ? true : (elementValidate[i].getAttribute("speed-validate-mode").toLowerCase() === "true");
         var msg = elementValidate[i].getAttribute("speed-validate-msg");
         var validationMessage = (msg == null || msg == "" || msg == "undefined") ? "Please enter a data" : msg;
         var fieldVisible = (elementValidate[i].style.display.toLowerCase() === "none") ? false : true;
@@ -1440,8 +1429,15 @@ Speed.prototype.bind = function (listObjects, bindClass, bindGroup) {
                             objValue[objproperties[objCount]] = inputTag.innerText;
                         }
                     } else {
-                        inputTag.getAttribute("speed-file-bind")
-                        objValue[objproperties[objCount]] = inputTag.innerText;
+                        inputTag.getAttribute("speed-file-bind");
+                        var currencyUsed = inputTag.getAttribute("speed-bind-currency");
+                        if (typeof currencyUsed === "undefined" || currencyUsed == null) {
+                            objValue[objproperties[objCount]] = inputTag.innerText;
+                        } else {
+                            var rawValue = (inputTag.getAttribute("speed-currency-numeric") === null) ? false : (inputTag.getAttribute("speed-currency-numeric").toLowerCase() === "true");
+                            objValue[objproperties[objCount]] = speedPointContext.stripCurrencyToNumber(inputTag.innerText, currencyUsed, rawValue)
+                        }
+                        
                     }
                     objCount++;
                 }
@@ -1466,9 +1462,9 @@ Speed.prototype.bind = function (listObjects, bindClass, bindGroup) {
                 returnObject[property] = arrayValue;
             }
 
-            if(useBindGroup){
+            if (useBindGroup) {
                 var controlGroup = (elementValidate[i].getAttribute("speed-bind-group") === null) ? "" : elementValidate[i].getAttribute("speed-bind-group").toLowerCase();
-                if(typeof bindGroupData[controlGroup] === "undefined"){
+                if (typeof bindGroupData[controlGroup] === "undefined") {
                     bindGroupData[controlGroup] = {};
                 }
                 bindGroupData[controlGroup][property] = returnObject[property];
@@ -1504,17 +1500,17 @@ Speed.prototype.bind = function (listObjects, bindClass, bindGroup) {
             }
         });
 
-        if(!omitControl){
+        if (!omitControl) {
             returnObject[property] = (strignify) ? JSON.stringify(multiData) : multiData;
-            if(useBindGroup){
+            if (useBindGroup) {
                 var controlGroup = (elementValidate[i].getAttribute("speed-bind-group") === null) ? "" : elementValidate[i].getAttribute("speed-bind-group").toLowerCase();
-                if(typeof bindGroupData[controlGroup] === "undefined"){
+                if (typeof bindGroupData[controlGroup] === "undefined") {
                     bindGroupData[controlGroup] = {};
                 }
                 bindGroupData[controlGroup][property] = returnObject[property];
             }
         }
-        
+
 
         if (validate && !oneChecked) {
             speedPointContext.validateField({
@@ -1564,10 +1560,10 @@ Speed.prototype.bind = function (listObjects, bindClass, bindGroup) {
         }
     }
 
-    return (useBindGroup) ? bindGroupData :  returnObject;
+    return (useBindGroup) ? bindGroupData : returnObject;
 }
 
-Speed.prototype.getFileMetaData = function(listObjects, bindClass){
+Speed.prototype.getFileMetaData = function (listObjects, bindClass) {
 
     var useBindClass = (typeof bindClass === 'string') ? true : false;
     var returnObject = {};
@@ -1586,7 +1582,7 @@ Speed.prototype.getFileMetaData = function(listObjects, bindClass){
             }
         }
 
-        if(typeof returnObject[docProperty] === "undefined"){
+        if (typeof returnObject[docProperty] === "undefined") {
             returnObject[docProperty] = {};
         }
         if (!omitControl && property !== null) {
@@ -1646,8 +1642,8 @@ Speed.prototype.getFileMetaData = function(listObjects, bindClass){
                             var value = element[i].value;
                             var dateFormat = element[i].getAttribute("speed-file-meta-date");
                             var format = element[i].getAttribute("speed-file-meta-format");
-                            if(dateFormat !== null && value !== ""){
-                                value = $spcontext.stringnifyDate({ value : value, format : format, reconstruct : dateFormat});
+                            if (dateFormat !== null && value !== "") {
+                                value = $spcontext.stringnifyDate({ value: value, format: format, reconstruct: dateFormat });
                             }
                             returnObject[docProperty][property] = value;
                         } else {
@@ -1673,8 +1669,8 @@ Speed.prototype.getFileMetaData = function(listObjects, bindClass){
                                 var value = element[i].value;
                                 var dateFormat = element[i].getAttribute("speed-file-meta-date");
                                 var format = element[i].getAttribute("speed-file-meta-format");
-                                if(dateFormat !== null && value !== ""){
-                                    value = $spcontext.stringnifyDate({ value : value, format : format, reconstruct : dateFormat});
+                                if (dateFormat !== null && value !== "") {
+                                    value = $spcontext.stringnifyDate({ value: value, format: format, reconstruct: dateFormat });
                                 }
                                 returnObject[docProperty][property] = value;
                             }
@@ -1685,14 +1681,14 @@ Speed.prototype.getFileMetaData = function(listObjects, bindClass){
                         }
                     }
                 }
-            } else{
+            } else {
                 returnObject[docProperty][property] = element[i].innerText;
             }
         }
     }
 
     return returnObject;
-} 
+}
 
 /**
  * The getAttachmentControls function gets all speed-bind & speed-bind-validate html attributes names
@@ -1711,13 +1707,13 @@ Speed.prototype.getAttachmentControls = function (useGroup) {
         var groupName = (element[i].getAttribute("speed-file-group") === null) ? "" : element[i].getAttribute("speed-file-group");
         var includeControl = (element[i].getAttribute("speed-include-control") === null) ? true : (element[i].getAttribute("speed-include-control").toLowerCase() === "true");
         if (includeControl && element[i].tagName.toLowerCase() == "input") {
-            if(groupMode){
-                if(typeof returnArr[groupName] === "undefined"){
+            if (groupMode) {
+                if (typeof returnArr[groupName] === "undefined") {
                     returnArr[groupName] = [];
                 }
                 returnArr[groupName].push(elementProp);
             }
-            else{
+            else {
                 returnArr.push(elementProp);
             }
         }
@@ -1733,13 +1729,13 @@ Speed.prototype.getAttachmentControls = function (useGroup) {
         var groupName = (element[i].getAttribute("speed-file-group") === null) ? "" : element[i].getAttribute("speed-file-group");
         var includeControl = (element[i].getAttribute("speed-include-control") === null) ? true : (element[i].getAttribute("speed-include-control").toLowerCase() === "true");
         if (includeControl && element[i].tagName.toLowerCase() == "input") {
-            if(groupMode){
-                if(typeof returnArr[groupName] === "undefined"){
+            if (groupMode) {
+                if (typeof returnArr[groupName] === "undefined") {
                     returnArr[groupName] = [];
                 }
                 returnArr[groupName].push(elementProp);
             }
-            else{
+            else {
                 returnArr.push(elementProp);
             }
         }
@@ -2407,7 +2403,7 @@ Speed.prototype.htmlBind = function (listObjects, bindExtensions, bindClass) {
                     element[i].getAttribute("speed-MultiCheck-bind-Class") : "";
                 elementProp.id = element[i].id;
                 var useAutoBinding = (element[i].getAttribute("speed-bind-auto") !== null) ? (element[i].getAttribute("speed-bind-auto").toLowerCase() === "true") : true;
-                if(useAutoBinding){
+                if (useAutoBinding) {
                     if (element[i].tagName.toLowerCase() === "div" || element[i].tagName.toLowerCase() === "p" || element[i].tagName.toLowerCase() === "ul") {
                         if ($.type(checkValues) === "array") {
                             $(element[i]).empty();
@@ -2435,7 +2431,7 @@ Speed.prototype.htmlBind = function (listObjects, bindExtensions, bindClass) {
                             }
                         }
                     }
-                } 
+                }
             }
 
             var element = document.querySelectorAll("[speed-file-meta='" + key + "']");
@@ -2450,7 +2446,7 @@ Speed.prototype.htmlBind = function (listObjects, bindExtensions, bindClass) {
                         }
                     }
                     if (useAutoBinding && typeof listObjects[key] !== "undefined") {
-                        if(typeof listObjects[key][property] !== "undefined"){
+                        if (typeof listObjects[key][property] !== "undefined") {
                             if (element[i].tagName.toLowerCase() == "input" || element[i].tagName.toLowerCase() == "textarea") {
                                 if (element[i].type === "radio") {
                                     if (listObjects[key][property] !== "")
@@ -2557,9 +2553,15 @@ Speed.prototype.dynamicTable = function (key, config) {
             defaultCols: defaultColumnSetup,
             controls: controls,
             conditions: config.listConditions,
+            beforeRowAdded: config.beforeRowAdded,
+            beforeRowRemoved: config.beforeRowRemoved,
             afterRowAdded: config.afterRowAdded,
             afterRowRemoved: config.afterRowRemoved,
+            afterRowDisplayed: config.afterRowDisplayed,
             addRow: function (usetabledata) {
+                if (typeof this.beforeRowAdded === "function") {
+                    this.beforeRowAdded(this, (this.tabledata.length - 1));
+                }
                 //saves current row
                 usetabledata = (typeof usetabledata == "undefined") ? false : usetabledata;
                 if (!usetabledata) {
@@ -2579,6 +2581,9 @@ Speed.prototype.dynamicTable = function (key, config) {
                 }
             },
             deleteRow: function (pos, usetabledata) {
+                if (typeof this.beforeRowRemoved === "function") {
+                    this.beforeRowRemoved(this);
+                }
                 //saves current row
                 usetabledata = (typeof usetabledata == "undefined") ? false : usetabledata;
                 if (!usetabledata) {
@@ -2609,6 +2614,10 @@ Speed.prototype.dynamicTable = function (key, config) {
                     conditions: this.conditions,
                     controls: this.controls
                 });
+
+                if (typeof this.afterRowDisplayed === "function") {
+                    this.afterRowDisplayed(this);
+                }
             },
             saveRows: function (display, usetabledata) {
                 var displayTable = (typeof display !== "undefined") ? display : false;
@@ -2938,13 +2947,13 @@ Speed.prototype.bindListDirectives = function (properties, onFailed, appContext)
                 }
 
                 var elementExist = false;
-                for(var y = 0; y <  spContext.htmlDictionary[listName].otherElements.length; y++){
-                    if(spContext.htmlDictionary[listName].otherElements[y].id === element[i].id){
+                for (var y = 0; y < spContext.htmlDictionary[listName].otherElements.length; y++) {
+                    if (spContext.htmlDictionary[listName].otherElements[y].id === element[i].id) {
                         elementExist = true;
                     }
                 }
 
-                if(!elementExist){
+                if (!elementExist) {
                     spContext.htmlDictionary[listName].otherElements.push({
                         id: element[i].id,
                         fullString: fullString,
@@ -3273,7 +3282,7 @@ Speed.prototype.numericEvents = function (extendProperties) {
                             var tempValue = speedPointContext.numberWithCommas(numberValue);
                             this.value = currency + tempValue;
                             if (typeof extension[property] == "function") {
-                                extension[property](numberValue, currency);
+                                extension[property](numberValue, currency, this);
                             }
                         }
                         evt.preventDefault();
@@ -3296,7 +3305,7 @@ Speed.prototype.numericEvents = function (extendProperties) {
                             evt.target.selectionStart = newpos;
                             evt.target.selectionEnd = evt.target.selectionStart;
                             if (typeof extension[property] == "function") {
-                                extension[property](numberValue, currency);
+                                extension[property](numberValue, currency,this);
                             }
 
                         } else if (evt.key == ".") {
@@ -3491,7 +3500,7 @@ Speed.prototype.createList = function (listProperties, onSuccess, onFailed, appC
                 err_description: "error getting all groups within create list command",
                 resource: listProperties.title
             });
-    });
+        });
 }
 
 Speed.prototype.deleteList = function (resourceName, onSuccess, onFailed, appContext) {
@@ -3536,15 +3545,15 @@ Speed.prototype.updateList = function (resourceProperties, callback, onFailed, a
     window.speedGlobal.push(requestList);
     var total = window.speedGlobal.length;
     total--;
-    if(typeof resourceProperties.newtitle !== "undefined"){
+    if (typeof resourceProperties.newtitle !== "undefined") {
         window.speedGlobal[total].set_title(resourceProperties.newtitle);
     }
-    
-    if(typeof resourceProperties.description !== "undefined"){
+
+    if (typeof resourceProperties.description !== "undefined") {
         window.speedGlobal[total].set_description(resourceProperties.description);
     }
 
-    if(resourceProperties.users.length > 0 || resourceProperties.group.length > 0){
+    if (resourceProperties.users.length > 0 || resourceProperties.group.length > 0) {
         window.speedGlobal[total].breakRoleInheritance(false, true);
 
         var allGroups = oWebsite.get_siteGroups();
@@ -3552,7 +3561,7 @@ Speed.prototype.updateList = function (resourceProperties, callback, onFailed, a
         clientContext.load(allGroups);
         clientContext.executeQueryAsync(function () {
 
-            if(resourceProperties.clearExistingRoles){
+            if (resourceProperties.clearExistingRoles) {
                 while (window.speedGlobal[total].get_roleAssignments().get_count() > 0) {
                     window.speedGlobal[total].get_roleAssignments().itemAt(0).deleteObject();
                 }
@@ -3599,9 +3608,9 @@ Speed.prototype.updateList = function (resourceProperties, callback, onFailed, a
                     err_description: "error getting all groups within update list command",
                     resource: listProperties.title
                 });
-        });
+            });
     }
-    else{
+    else {
         // Update the library
         window.speedGlobal[total].update();
         clientContext.executeQueryAsync(function () {
@@ -3617,7 +3626,7 @@ Speed.prototype.updateList = function (resourceProperties, callback, onFailed, a
             });
         });
     }
-    
+
 }
 Speed.prototype.getAllListInSite = function (callback, onFailed, appContext) {
     var speedContext = this;
@@ -3694,7 +3703,7 @@ Speed.prototype.getListPermissions = function (listName, onSuccess, onFailed, ap
             // Log the member (user or group) and their permissions
             usersPermssions[login] = [];
 
-            for (var i = 0; i < bindings.get_count(); i++){
+            for (var i = 0; i < bindings.get_count(); i++) {
                 var roleDefinition = bindings.itemAt(i);
                 usersPermssions[login].push(roleDefinition.get_name());
             }
@@ -3806,15 +3815,15 @@ Speed.prototype.updateItems = function (arr, listName, onSuccess, onFailed, appC
                 context = appContext.initiate();
             }
             //context.load(passwordList);
-            speedContext.updateItemsTracker(0, arr, updateList, context, listName,onSuccess, onFailedCall);
+            speedContext.updateItemsTracker(0, arr, updateList, context, listName, onSuccess, onFailedCall);
         }
-        else{
+        else {
             onSuccess();
         }
     }
 };
 
-Speed.prototype.updateItemsTracker = function (pos, arr, list, context,listName, onSuccess, onFailedCall) {
+Speed.prototype.updateItemsTracker = function (pos, arr, list, context, listName, onSuccess, onFailedCall) {
     var speedContext = this;
     var itemProperties = arr[pos];
     var item = list.getItemById(itemProperties.ID);
@@ -3828,10 +3837,10 @@ Speed.prototype.updateItemsTracker = function (pos, arr, list, context,listName,
         item.update();
         context.executeQueryAsync(function () {
             var newNumber = pos + 1;
-            if(newNumber <= (arr.length - 1)){
-                speedContext.updateItemsTracker(newNumber,arr,list,context,listName,onSuccess, onFailedCall);
+            if (newNumber <= (arr.length - 1)) {
+                speedContext.updateItemsTracker(newNumber, arr, list, context, listName, onSuccess, onFailedCall);
             }
-            else{
+            else {
                 onSuccess();
             }
             speedContext.updateItemsTracker
@@ -3900,7 +3909,7 @@ Speed.prototype.createItems = function (arr, listProperties, onSuccess, onFailed
                 context.executeQueryAsync(function () {
                     /**/
                     if (listProperties.breakRoleInheritance) {
-                        for(var y = 0; y < listitemArr.length; y++){
+                        for (var y = 0; y < listitemArr.length; y++) {
                             listitemArr[y].breakRoleInheritance(false, false);
                             var oWebsite = context.get_web();
                             for (var x = 0; x < listProperties.users.length; x++) {
@@ -3909,7 +3918,7 @@ Speed.prototype.createItems = function (arr, listProperties, onSuccess, onFailed
                                 role.add(oWebsite.get_roleDefinitions().getByType(listProperties.users[x].role));
                                 listitemArr[y].get_roleAssignments().add(userobj, role);
                             }
-            
+
                             //group object already created and set in properties array to make the call faster
                             for (var x = 0; x < listProperties.groups.length; x++) {
                                 var role = SP.RoleDefinitionBindingCollection.newObject(context);
@@ -3918,7 +3927,7 @@ Speed.prototype.createItems = function (arr, listProperties, onSuccess, onFailed
                             }
                             context.load(listitemArr[y]);
                         }
-        
+
                         context.executeQueryAsync(function () {
                             setTimeout(function () {
                                 onSuccess(listitemArr);
@@ -3987,15 +3996,15 @@ Speed.prototype.deleteItem = function (listname, id, onSuccess, onFailed, appCon
 
 Speed.prototype.deleteMultipleItems = function (listname, items, onSuccess, onFailed, appContext) {
     var speedContext = this;
-    var onFailedCall = (typeof onFailed === 'undefined' || onFailed == null) ? this.errorHandler : onFailed;  
+    var onFailedCall = (typeof onFailed === 'undefined' || onFailed == null) ? this.errorHandler : onFailed;
     speedContext.tempCallbacks[listname] = {
-        total : items.length,
-        completed : 0
+        total: items.length,
+        completed: 0
     }
-    for(var i = 0; i < items.length; i++){
-        speedContext.deleteItem(listname, items[i].ID, function(listNameReturned){
+    for (var i = 0; i < items.length; i++) {
+        speedContext.deleteItem(listname, items[i].ID, function (listNameReturned) {
             speedContext.tempCallbacks[listNameReturned].completed++;
-            if(speedContext.tempCallbacks[listNameReturned].total === speedContext.tempCallbacks[listNameReturned].completed){
+            if (speedContext.tempCallbacks[listNameReturned].total === speedContext.tempCallbacks[listNameReturned].completed) {
                 onSuccess();
             }
         }, onFailedCall, appContext);
@@ -4129,15 +4138,15 @@ Speed.prototype.getListToControl = function (listName, caml, controls, onSuccess
                         arrayToSave.push(objectOfUsers);
                     }
                     objectToReturn[controlsToUse[i]] = arrayToSave;
-                } 
-                else if (SPFieldType.toLowerCase() === "sp.fieldurlvalue"){
-                    objectToReturn[controlsToUse[i]] =  SpeedContext.checkNull(items.get_item(controlsToUse[i]).get_url());
                 }
-                else{
-                    try{
+                else if (SPFieldType.toLowerCase() === "sp.fieldurlvalue") {
+                    objectToReturn[controlsToUse[i]] = SpeedContext.checkNull(items.get_item(controlsToUse[i]).get_url());
+                }
+                else {
+                    try {
                         items.get_item(controlsToUse[i])
                     }
-                    catch(e){
+                    catch (e) {
                         throw `${controlsToUse[i]} doesnt exist in this list`;
                     }
                     objectToReturn[controlsToUse[i]] = SpeedContext.checkNull(items.get_item(controlsToUse[i]));
@@ -4190,6 +4199,7 @@ Speed.prototype.getListToItems = function (listName, caml, controls, tableonly, 
     var ignoreThreshold = (typeof controls.ignoreThreshold == "undefined") ? true : controls.ignoreThreshold
 
     var thresholdCount = (typeof controls.threshold == "undefined") ? 5000 : controls.threshold;
+    var feedback = (typeof controls.feedback == "undefined") ? null : controls.feedback;
     var onFailedCall = (typeof onFailed === 'undefined' || onFailed == null) ? this.errorHandler : onFailed;
     if (ignoreThreshold) {
         getItemsInList();
@@ -4263,7 +4273,7 @@ Speed.prototype.getListToItems = function (listName, caml, controls, tableonly, 
                             }
                         }
                         objectToReturn[controlsToUse[i]] = objProp;
-                    } 
+                    }
                     else if (SPFieldType.toLowerCase() === "array") {
                         var multiUser = listEnumerator.get_current().get_item(controlsToUse[i]);
                         var arrayToSave = [];
@@ -4285,9 +4295,9 @@ Speed.prototype.getListToItems = function (listName, caml, controls, tableonly, 
                             }
                         }
                         objectToReturn[controlsToUse[i]] = arrayToSave;
-                    } 
-                    else if (SPFieldType.toLowerCase() === "sp.fieldurlvalue"){
-                        var columnValue =  SpeedContext.checkNull(listEnumerator.get_current().get_item(controlsToUse[i]).get_url());
+                    }
+                    else if (SPFieldType.toLowerCase() === "sp.fieldurlvalue") {
+                        var columnValue = SpeedContext.checkNull(listEnumerator.get_current().get_item(controlsToUse[i]).get_url());
                         if (typeof conditions === "object" && conditions !== null) {
                             if (typeof conditions[controlsToUse[i]] !== "undefined") {
                                 columnValue = conditions[controlsToUse[i]](columnValue);
@@ -4296,10 +4306,10 @@ Speed.prototype.getListToItems = function (listName, caml, controls, tableonly, 
                         objectToReturn[controlsToUse[i]] = columnValue;
                     }
                     else {
-                        try{
+                        try {
                             listEnumerator.get_current().get_item(controlsToUse[i]);
                         }
-                        catch(e){
+                        catch (e) {
                             throw `${controlsToUse[i]} doesnt exist in this list`;
                         }
                         var columnValue = SpeedContext.checkNull(listEnumerator.get_current().get_item(controlsToUse[i]));
@@ -4333,7 +4343,8 @@ Speed.prototype.getListToItems = function (listName, caml, controls, tableonly, 
                 threshold: thresholdCount,
                 itemsInList: requestCount.itemCount,
                 lastItemID: requestCount.lastItemID,
-                conditions: conditions
+                conditions: conditions,
+                feedback : feedback
             }
             SpeedContext.getItemsMaxThreshold(listName, caml, data, onSuccess, onFailed, appContext);
         }
@@ -4372,6 +4383,7 @@ Speed.prototype.getItemsMaxThreshold = function (listName, caml, listSearchData,
         camlModified[0].ascending = "FALSE";
         SpeedContext.thresholdListSettings[listName].ascending = "FALSE";
         SpeedContext.thresholdListSettings[listName].orderby = camlModified[0].orderby;
+        SpeedContext.thresholdListSettings[listName].feedback = listSearchData.feedback;
 
         SpeedContext.getItem(listName, SpeedContext.camlBuilder(camlModified), function (itemProperties) {
             var listItems = [];
@@ -4434,10 +4446,10 @@ Speed.prototype.getItemsMaxThreshold = function (listName, caml, listSearchData,
                         objectToReturn[controlsToUse[i]] = arrayToSave;
                     }
                     else {
-                        try{
+                        try {
                             listEnumerator.get_current().get_item(controlsToUse[i]);
                         }
-                        catch(e){
+                        catch (e) {
                             throw `${controlsToUse[i]} doesnt exist in this list`;
                         }
                         var columnValue = SpeedContext.checkNull(listEnumerator.get_current().get_item(controlsToUse[i]));
@@ -4475,6 +4487,17 @@ Speed.prototype.getItemsMaxThreshold = function (listName, caml, listSearchData,
                 itemsToSend.sort((a, b) => (a[SpeedContext.thresholdListSettings[list].orderby] < b[SpeedContext.thresholdListSettings[list].orderby]) ? 1 : -1);
             }
             callback(itemsToSend);
+        }
+        else if(SpeedContext.thresholdListSettings[listName].feedback !== null){
+            //feedback to the user
+            var itemsToSend = getUniqueListBy(SpeedContext.thresholdListSettings[list].items, "ID");
+            if (SpeedContext.thresholdListSettings[list].ascending) {
+                itemsToSend.sort((a, b) => (b[SpeedContext.thresholdListSettings[list].orderby] < a[SpeedContext.thresholdListSettings[list].orderby]) ? 1 : -1);
+            }
+            else {
+                itemsToSend.sort((a, b) => (a[SpeedContext.thresholdListSettings[list].orderby] < b[SpeedContext.thresholdListSettings[list].orderby]) ? 1 : -1);
+            }
+            SpeedContext.thresholdListSettings[listName].feedback(itemsToSend);
         }
     }
 
@@ -4530,10 +4553,10 @@ Speed.prototype.formAppInitialization = function (listInfo, extraFields, callbac
         spContext.createColumnInList(arr, listProperties.title, callback, onFailedCall, appContext);
     }, function (sender, args) {
         //if list already exist
-        if(listProperties.ignoreError){
+        if (listProperties.ignoreError) {
             spContext.createColumnInList(arr, listProperties.title, callback, onFailedCall, appContext);
         }
-        else{
+        else {
             onFailedCall(sender, args, {
                 name: "createList",
                 context: spContext,
@@ -4631,7 +4654,7 @@ Speed.prototype.stringnifyDate = function (obj) {
             var dateObj = obj.value.split(getDelimiter);
             var formatObj = obj.format.split(getDelimiter);
             var positions = {}
-            for(var i = 0; i < formatObj.length; i++){
+            for (var i = 0; i < formatObj.length; i++) {
                 positions[formatObj[i]] = i;
             }
             //change format to used format mm dd yy
@@ -4640,7 +4663,7 @@ Speed.prototype.stringnifyDate = function (obj) {
         var str = new Date(obj.value);
     }
 
-    if(reconstructDate){
+    if (reconstructDate) {
         obj.format = obj.reconstruct;
     }
 
@@ -4883,10 +4906,10 @@ Speed.prototype.clearFileInput = function (elementid, clearFromDictionary) {
     if (clearFromDictionary) {
         var elementBindProperty = (elementNode.getAttribute("speed-file-bind") === null) ?
             elementNode.getAttribute("speed-file-validate") : elementNode.getAttribute("speed-file-bind");
-        try{
+        try {
             $spcontext.filesDictionary[elementBindProperty].files = [];
         }
-        catch(e){}
+        catch (e) { }
     }
 }
 
@@ -5156,22 +5179,22 @@ Speed.prototype.getFileDataURIViaRest = function (url, onSuccess, onFailed) {
     // Construct the file endpoint URL
     var fileEndpointUrl = siteUrl + "/_api/web/GetFileByServerRelativeUrl('" + fileServerRelativeUrl + "')/$value";
     var xmlHTTP = new XMLHttpRequest();
-        xmlHTTP.open('GET', fileEndpointUrl, true);
-        xmlHTTP.responseType = 'arraybuffer';
-        xmlHTTP.onload = function (e) {
-            if (this.status === 200) {
-                onSuccess(this.response);
-            } else {
-                var speedError = {};
-                speedError.errorObject = this;
-                if (this.responseType === "text" || this.responseType === "")
-                    speedError.msg = "status : " + this.status + " , " + this.responseText;
-                else
-                    speedError.msg = "status : " + this.status;
-                onFailedCall(speedError);
-            }
-        };
-        xmlHTTP.send();
+    xmlHTTP.open('GET', fileEndpointUrl, true);
+    xmlHTTP.responseType = 'arraybuffer';
+    xmlHTTP.onload = function (e) {
+        if (this.status === 200) {
+            onSuccess(this.response);
+        } else {
+            var speedError = {};
+            speedError.errorObject = this;
+            if (this.responseType === "text" || this.responseType === "")
+                speedError.msg = "status : " + this.status + " , " + this.responseText;
+            else
+                speedError.msg = "status : " + this.status;
+            onFailedCall(speedError);
+        }
+    };
+    xmlHTTP.send();
 }
 
 /** 
@@ -6422,6 +6445,43 @@ Speed.prototype.isCurrentUserMemberOfGroup = function (groupCollection, callback
 }
 
 /**
+ * The allUserMembershipGroups function checks all groups the current user belongs to . 
+ * @param {callback(Array)} callback this parameter is the call back function when the function is successful.
+ * an Array of strings is Returned 
+ * @param {callback(sender,args)} [onFailed = this.onQueryFailed()] this parameter is the call back function thats called when the function fails, by default
+ * onQueryFailed is called when all sharepoint async calls fail
+ */
+Speed.prototype.allUserMembershipGroups = function (callback, onFailed) {
+    var speedContext = this;
+    var onFailedCall = (typeof onFailed === 'undefined') ? this.errorHandler : onFailed;
+
+    var clientContext = this.initiate();
+    var currentUser = clientContext.get_web().get_currentUser();
+    clientContext.load(currentUser);
+
+    var userGroups = currentUser.get_groups();
+    clientContext.load(userGroups);
+    clientContext.executeQueryAsync(function () {
+        var userMemberGroups = [];
+        var groupsEnumerator = userGroups.getEnumerator();
+        while (groupsEnumerator.moveNext()) {
+            var group = groupsEnumerator.get_current();
+            groupName = group.get_title();
+            userMemberGroups.push(groupName);
+        }
+
+        callback(userMemberGroups);
+    }, function (sender, args) {
+        onFailedCall(sender, args, {
+            name: "allUserMembershipGroups",
+            context: speedContext,
+            err_description: "",
+            resource: ""
+        });
+    });
+}
+
+/**
  * The matchNameWithUserGroup function confirms if a user belong to a group by returning the Name of the Group in an array. 
  * @param {Array} groupCollection the groups which users will be retrieved from.
  * @param {boolean} allCollection only match one group.
@@ -6495,17 +6555,17 @@ Speed.prototype.convertDataURIToBinary = function (dataURI) {
  * @param {ArrayBuffer} data this parameter provides datauri string
  * @returns {string} the byte string used for chunk uploading
  */
-Speed.prototype.convertArrayBufferToBinary = function (data,isUint8) {
+Speed.prototype.convertArrayBufferToBinary = function (data, isUint8) {
     isUint8 = (typeof isUint8 === "undefined") ? false : isUint8;
     var fileData = '';
     var byteArray = null;
-    if(isUint8){
+    if (isUint8) {
         byteArray = data;
     }
-    else{
+    else {
         byteArray = new Uint8Array(data);
     }
-    
+
     for (var i = 0; i < byteArray.byteLength; i++) {
         fileData += String.fromCharCode(byteArray[i]);
     }
@@ -6936,7 +6996,7 @@ Speed.prototype.createSubFolder = function (foldernames, libraryDetails, metadat
                             }, 1000);
                         }
                     }
-                    else{
+                    else {
                         setTimeout(function () {
                             if (count < (folderNames.length - 1)) {
                                 var totalFolder = folderNames.length;
@@ -6944,7 +7004,7 @@ Speed.prototype.createSubFolder = function (foldernames, libraryDetails, metadat
                                 var completed = (newNumber / totalFolder) * 100;
                                 feedBack(parseInt(completed));
                                 count++;
-                                checkFolderExists(window.speedGlobal[total], urloffolder, folderNames, count, metadata,libraryProperties);
+                                checkFolderExists(window.speedGlobal[total], urloffolder, folderNames, count, metadata, libraryProperties);
                             } else {
                                 feedBack(100);
                                 onSuccess(urloffolder);
@@ -7017,13 +7077,13 @@ Speed.prototype.deleteFolderOrFile = function (properties, onSuccess, onFailed, 
     }
     context.load(oWebsite);
     context.executeQueryAsync(function () {
-        if(properties.fileType === "folder"){
+        if (properties.fileType === "folder") {
             window.speedGlobal.push(oWebsite.getFolderByServerRelativeUrl(properties.url));
         }
-        else{
+        else {
             window.speedGlobal.push(oWebsite.getFileByServerRelativeUrl(properties.url));
         }
-        
+
         var total = window.speedGlobal.length;
         total--;
         window.speedGlobal[total].deleteObject();
@@ -7069,8 +7129,8 @@ Speed.prototype.uploadFile = function (nameOfFile, dataOfFile, fileProperties, o
     }
     else if (typeof fileProperties === "object") {
         folder = fileProperties.folder;
-        
-        if(typeof fileProperties.dataFormat !== "undefined"){
+
+        if (typeof fileProperties.dataFormat !== "undefined") {
             dataFormat = fileProperties.dataFormat;
         }
     }
@@ -7082,10 +7142,10 @@ Speed.prototype.uploadFile = function (nameOfFile, dataOfFile, fileProperties, o
     var filetype = fileNameSplit.pop();
 
     if (dataOfFile !== null) {
-        if (filetype.toLowerCase() === "txt" || dataFormat === "binary"){
+        if (filetype.toLowerCase() === "txt" || dataFormat === "binary") {
             var data = dataOfFile;
-        } 
-        else{
+        }
+        else {
             var data = this.convertDataURIToBinary(dataOfFile);
         }
     }
@@ -7102,7 +7162,7 @@ Speed.prototype.uploadFile = function (nameOfFile, dataOfFile, fileProperties, o
                 fileCreateInfo.get_content().append(data.charCodeAt(i));
             else
                 fileCreateInfo.get_content().append(data[i]);
-                
+
         }
     }
 
@@ -7316,7 +7376,7 @@ Speed.prototype.grabAllAttachments = function (returnDuplicateFiles, allowDuplic
         for (var y = 0; y < files[x].files.length; y++) {
             if (typeof files[x].files[y] === 'object') {
                 var metadata = this.getFileMetaData()[x];
-                if(typeof metadata !== "undefined"){
+                if (typeof metadata !== "undefined") {
                     files[x].files[y].metadata = metadata;
                 }
 
@@ -7324,11 +7384,11 @@ Speed.prototype.grabAllAttachments = function (returnDuplicateFiles, allowDuplic
                     if (files[x].files[y].duplicate) {
                         returnArray.push(files[x].files[y]);
                     }
-                } 
+                }
                 else {
                     if (!files[x].files[y].duplicate || allowDuplicates) {
                         returnArray.push(files[x].files[y]);
-                    } 
+                    }
                     else {
                         if (typeof this.filesDictionary[files[x].files[y].duplicateProp] === "undefined") {
                             this.filesDictionary[x].files[y].duplicate = false;
@@ -7542,9 +7602,9 @@ Speed.prototype.ajax = function (url, verb, success, onfailed) {
             //console.log(this.responseText);
             success(this.responseText);
         }
-        else if(this.status !== 200){
+        else if (this.status !== 200) {
             if (typeof onfailed !== "undefined") {
-                onfailed(this.responseText,null,true);
+                onfailed(this.responseText, null, true);
             }
         }
     }
@@ -7759,7 +7819,7 @@ Speed.prototype.applyAttachmentEvent = function (properties, onSuccess, onFailed
                                                             format: "dd-mm-yy"
                                                         }) + "." + fileExt);
                                                 }
-                                                else{
+                                                else {
                                                     fileObject.dataName = fileObject.filename;
                                                 }
                                             }
@@ -7924,7 +7984,7 @@ Speed.prototype.getFileFolderExists = function (fileFolderUrl, fileorfolder, onS
  * onQueryFailed is called when all sharepoint async calls fail
  * @param {object} [appContext = {}] instance of the speedpoint app context created, used for o365 Cross Domain Request
  */
-Speed.prototype.logWriter = function (logName,logContent, library, logLimit, callback, onFailed, appContext) {
+Speed.prototype.logWriter = function (logName, logContent, library, logLimit, callback, onFailed, appContext) {
     var speedContext = this;
     var onFailedCall = (typeof onFailed === 'undefined' || onFailed == null) ? this.errorHandler : onFailed;
     var query = [{
@@ -8070,16 +8130,16 @@ Speed.prototype.getListToTable = function (listName, caml, controls, conditions,
                     if (Arr[x][propName] !== "undefined") {
                         if (SpeedContext.DataForTable.propertiesHandler.hasOwnProperty(groupName)) {
                             if (useTD) {
-                                str += "<td>" + SpeedContext.DataForTable.propertiesHandler[groupName](Arr[x], x, propName) + "</td>";
+                                str += "<td>" + SpeedContext.DataForTable.propertiesHandler[groupName](Arr[x], x, propName,this) + "</td>";
                             } else {
-                                str += SpeedContext.DataForTable.propertiesHandler[groupName](Arr[x], x, propName);
+                                str += SpeedContext.DataForTable.propertiesHandler[groupName](Arr[x], x, propName,this);
                             }
                         }
                         else if (SpeedContext.DataForTable.propertiesHandler.hasOwnProperty(propName)) {
                             if (useTD) {
-                                str += "<td>" + SpeedContext.DataForTable.propertiesHandler[propName](Arr[x], x) + "</td>";
+                                str += "<td>" + SpeedContext.DataForTable.propertiesHandler[propName](Arr[x], x, propName,this) + "</td>";
                             } else {
-                                str += SpeedContext.DataForTable.propertiesHandler[propName](Arr[x], x);
+                                str += SpeedContext.DataForTable.propertiesHandler[propName](Arr[x], x, propName,this);
                             }
                         } else
                             str += "<td>" + Arr[x][propName] + "</td>";
@@ -8155,18 +8215,18 @@ Speed.prototype.manualTable = function (tableData, settings) {
                 if (this.DataForTable.tabledata[x][propName] !== "undefined") {
                     if (this.DataForTable.propertiesHandler.hasOwnProperty(groupName)) {
                         if (useTD) {
-                            str += "<td>" + this.DataForTable.propertiesHandler[groupName](this.DataForTable.tabledata[x], x, propName) + "</td>";
+                            str += "<td>" + this.DataForTable.propertiesHandler[groupName](this.DataForTable.tabledata[x], x, propName,this) + "</td>";
                         } else {
-                            str += this.DataForTable.propertiesHandler[groupName](this.DataForTable.tabledata[x], x, propName);
+                            str += this.DataForTable.propertiesHandler[groupName](this.DataForTable.tabledata[x], x, propName,this);
                         }
                     }
                     else if (this.DataForTable.propertiesHandler.hasOwnProperty(propName)) {
                         if (useTD) {
-                            str += "<td>" + this.DataForTable.propertiesHandler[propName](this.DataForTable.tabledata[x], x) + "</td>";
+                            str += "<td>" + this.DataForTable.propertiesHandler[propName](this.DataForTable.tabledata[x], x, propName,this) + "</td>";
                         } else {
-                            str += this.DataForTable.propertiesHandler[propName](this.DataForTable.tabledata[x], x);
+                            str += this.DataForTable.propertiesHandler[propName](this.DataForTable.tabledata[x], x, propName,this);
                         }
-                    }  else
+                    } else
                         str += "<td>" + this.DataForTable.tabledata[x][propName] + "</td>";
                 } else {
                     str += "<td></td>";
@@ -8314,7 +8374,7 @@ Speed.prototype.customElementPagination = function (tableData, blockElement) {
                     var stringToFind = "{{" + propName + "}}";
                     var regex = new RegExp(stringToFind, "g");
                     if (this.DataForTable.propertiesHandler.hasOwnProperty(propName)) {
-                        var value = this.DataForTable.propertiesHandler[propName](Arr[x], x);
+                        var value = this.DataForTable.propertiesHandler[propName](Arr[x], x, propName,this);
                         innerElement = innerElement.replace(regex, value);
                     }
                     else {
